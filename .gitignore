@@ -1,0 +1,24 @@
+# Virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# PyCharm
+.idea/
+*.iml
+
+# Environment and local files
+.env
+*.log
+
+# Test and build output
+.pytest_cache/
+build/
+dist/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
