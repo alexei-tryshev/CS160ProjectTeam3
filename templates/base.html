@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Wellness Tracker{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('main.home') }}">Wellness Tracker</a>
+        <nav aria-label="Primary navigation">
+            <a href="{{ url_for('main.home') }}">Dashboard</a>
+            <a href="{{ url_for('tracking.feature_page', feature='nutrition') }}">Nutrition</a>
+            <a href="{{ url_for('tracking.feature_page', feature='water') }}">Water</a>
+            <a href="{{ url_for('tracking.feature_page', feature='steps') }}">Steps</a>
+            <a href="{{ url_for('tracking.feature_page', feature='weight') }}">Weight</a>
+        </nav>
+    </header>
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <p class="message {{ category }}" role="status">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

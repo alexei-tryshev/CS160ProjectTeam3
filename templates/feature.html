@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ config.label }} | Wellness Tracker{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('main.home') }}">Back to dashboard</a>
+<p class="eyebrow">First-wave logging feature</p>
+<h1>{{ config.label }}</h1>
+<p class="intro">{{ config.description }}</p>
+
+{% if errors %}
+    <div class="errors" role="alert">
+        <strong>Please correct the following:</strong>
+        <ul>
+        {% for error in errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+<form method="post" class="entry-form">
+    {% for field in config.fields %}
+        <label for="{{ field.name }}">{{ field.label }}</label>
+        <input id="{{ field.name }}" name="{{ field.name }}" type="{{ field.type }}"
+               value="{{ form.get(field.name, '') }}"
+               {% if field.step %}step="{{ field.step }}"{% endif %}
+               {% if field.required %}required{% endif %}>
+    {% endfor %}
+    <button type="submit">Save entry</button>
+</form>
+
+<section class="entries" aria-labelledby="entries-heading">
+    <h2 id="entries-heading">Recent entries</h2>
+    {% if entries %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        {% for field in config.fields %}<th scope="col">{{ field.label }}</th>{% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                        <tr>
+                            {% for field in config.fields %}<td>{{ entry.data.get(field.name, '') }}</td>{% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty-state">No entries yet. Add the first one above.</p>
+    {% endif %}
+</section>
+{% endblock %}

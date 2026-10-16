@@ -1,28 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wellness Tracker</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <main class="container">
-        <p class="label">Sprint 1</p>
-        <h1>Wellness Tracker</h1>
-        <p class="intro">Test website for our Fitness tracker.</p>
+{% extends "base.html" %}
+{% block title %}Dashboard | Wellness Tracker{% endblock %}
+{% block content %}
+<p class="eyebrow">Sprint 2 foundation</p>
+<h1>Track the habits that shape your health.</h1>
+<p class="intro">This first implementation slice lets a demo user record and review nutrition, water, steps, and weight entries.</p>
 
-        <h2>Planned features</h2>
-        <section class="features">
-            <div class="card">Nutrition tracking</div>
-            <div class="card">Weight tracking</div>
-            <div class="card">Fitness logging</div>
-            <div class="card">Water intake</div>
-            <div class="card">AI-generated recipes</div>
-            <div class="card">Workout meal planning</div>
-        </section>
+<section class="feature-grid" aria-label="Available features">
+    {% for key in ["nutrition", "water", "steps", "weight"] %}
+        {% set item = features[key] %}
+        <a class="feature-card" href="{{ url_for('tracking.feature_page', feature=key) }}">
+            <span class="card-label">Available</span>
+            <h2>{{ item.label }}</h2>
+            <p>{{ item.description }}</p>
+            <span class="card-link">Open tracker</span>
+        </a>
+    {% endfor %}
+</section>
 
-        <p class="footer">More features will be added in future sprints.</p>
-    </main>
-</body>
-</html>
+<section class="planned" aria-labelledby="planned-heading">
+    <h2 id="planned-heading">Planned for later sprints</h2>
+    <p>Authentication is the next Sprint 2 implementation task. Macronutrient summaries, AI-generated recipes, workout meal planning, and other multi-user features will build on this data foundation later.</p>
+</section>
+{% endblock %}
