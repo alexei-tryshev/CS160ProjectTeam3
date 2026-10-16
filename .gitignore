@@ -22,3 +22,6 @@ dist/
 # Operating-system files
 .DS_Store
 Thumbs.db
+
+#environment variables
+.env.example
