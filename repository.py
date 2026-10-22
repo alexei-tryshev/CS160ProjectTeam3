@@ -2,6 +2,14 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 from uuid import uuid4
 
+from schema import (
+    ENTRIES_COLLECTION,
+    ENTRY_INDEXES,
+    USER_INDEXES,
+    USERS_COLLECTION,
+    validate_entry_document_shape,
+)
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -16,8 +24,21 @@ def _serialize_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-class InMemoryRepository:
+def _validate_entry_document(
+    document: Dict[str, Any],
+) -> None:
 
+    errors = validate_entry_document_shape(document)
+
+    if errors:
+        raise ValueError(
+            "Invalid entry document: {}".format(
+                " ".join(errors)
+            )
+        )
+
+
+class InMemoryRepository:
 
     def __init__(self) -> None:
         self._entries: List[Dict[str, Any]] = []
@@ -37,7 +58,10 @@ class InMemoryRepository:
             "created_at": _utc_now(),
         }
 
+        _validate_entry_document(entry)
+
         self._entries.append(entry)
+
         return dict(entry)
 
     def list_entries(
@@ -66,7 +90,6 @@ class InMemoryRepository:
 
 class MongoRepository:
 
-
     def __init__(
         self,
         uri: str,
@@ -80,10 +103,35 @@ class MongoRepository:
             serverSelectionTimeoutMS=timeout_ms,
         )
 
-        self.collection = self.client[database_name]["entries"]
+        self.database = self.client[database_name]
+
+        self.collection = self.database[
+            ENTRIES_COLLECTION
+        ]
+
+        self.users_collection = self.database[
+            USERS_COLLECTION
+        ]
 
     def ping(self) -> None:
+
         self.client.admin.command("ping")
+        self.ensure_indexes()
+
+    def ensure_indexes(self) -> None:
+
+        for index in ENTRY_INDEXES:
+            self.collection.create_index(
+                index["keys"],
+                name=index["name"],
+            )
+
+        for index in USER_INDEXES:
+            self.users_collection.create_index(
+                index["keys"],
+                name=index["name"],
+                unique=index.get("unique", False),
+            )
 
     def add_entry(
         self,
@@ -99,7 +147,10 @@ class MongoRepository:
             "created_at": _utc_now(),
         }
 
+        _validate_entry_document(document)
+
         result = self.collection.insert_one(document)
+
         document["_id"] = result.inserted_id
 
         return _serialize_entry(document)
