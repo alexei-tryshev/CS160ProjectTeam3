@@ -122,7 +122,7 @@ def entries_api(feature: str):
 
 @api_bp.route(
     "/entries/<feature>/<entry_id>",
-    methods=["GET", "PUT"],
+    methods=["GET", "PUT", "DELETE"],
 )
 def entry_api(feature: str, entry_id: str):
 
@@ -158,6 +158,32 @@ def entry_api(feature: str, entry_id: str):
             ), 404
 
         return jsonify({"entry": entry})
+
+    if request.method == "DELETE":
+        user_id = _user_id_from_value(
+            request.args.get(
+                "user_id",
+                DEFAULT_USER_ID,
+            )
+        )
+
+        if user_id is None:
+            return jsonify(
+                {"error": "user_id is required."}
+            ), 400
+
+        deleted = _repository().delete_entry(
+            entry_id,
+            feature,
+            user_id,
+        )
+
+        if not deleted:
+            return jsonify(
+                {"error": "Entry not found."}
+            ), 404
+
+        return jsonify({"deleted": True})
 
     body = request.get_json(silent=True)
 

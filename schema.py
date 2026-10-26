@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 USERS_COLLECTION = "users"
 ENTRIES_COLLECTION = "entries"
+GOALS_COLLECTION = "goals"
 
 
 FEATURE_PAYLOAD_FIELDS: Dict[str, Tuple[str, ...]] = {
@@ -59,6 +60,15 @@ USER_INDEXES: List[Dict[str, Any]] = [
 ]
 
 
+GOAL_INDEXES: List[Dict[str, Any]] = [
+    {
+        "keys": [("user_id", 1)],
+        "name": "goals_by_user",
+        "unique": True,
+    },
+]
+
+
 ENTRY_REQUIRED_FIELDS = (
     "feature",
     "user_id",
@@ -71,6 +81,12 @@ USER_REQUIRED_FIELDS = (
     "email",
     "password_hash",
     "created_at",
+)
+
+GOAL_REQUIRED_FIELDS = (
+    "user_id",
+    "water_goal_ml",
+    "updated_at",
 )
 
 
@@ -291,6 +307,40 @@ def validate_user_document_shape(
     if not _valid_timestamp(document.get("created_at")):
         errors.append(
             "The user created_at field must be an ISO-8601 timestamp."
+        )
+
+    return errors
+
+
+def validate_goal_document_shape(
+    document: Dict[str, Any],
+) -> List[str]:
+
+    errors: List[str] = []
+
+    for field in GOAL_REQUIRED_FIELDS:
+        if field not in document:
+            errors.append(
+                "Missing goal field: {}.".format(field)
+            )
+
+    user_id = document.get("user_id")
+
+    if not isinstance(user_id, str) or not user_id.strip():
+        errors.append(
+            "The user_id field must be a non-empty string."
+        )
+
+    water_goal_ml = document.get("water_goal_ml")
+
+    if not _valid_non_negative_integer(water_goal_ml) or water_goal_ml == 0:
+        errors.append(
+            "The water_goal_ml field must be a whole number greater than zero."
+        )
+
+    if not _valid_timestamp(document.get("updated_at")):
+        errors.append(
+            "The goal updated_at field must be an ISO-8601 timestamp."
         )
 
     return errors

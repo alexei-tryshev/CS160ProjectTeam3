@@ -4,6 +4,8 @@ from app import create_app
 from schema import (
     ENTRIES_COLLECTION,
     ENTRY_INDEXES,
+    GOAL_INDEXES,
+    GOALS_COLLECTION,
     USER_INDEXES,
     USERS_COLLECTION,
     validate_entry_document_shape,
@@ -95,6 +97,42 @@ class WellnessTrackerTestCase(unittest.TestCase):
             1,
         )
 
+    def test_api_deletes_entry(self):
+        created = self.client.post(
+            "/api/entries/weight",
+            json={
+                "date": "2026-10-15",
+                "weight_kg": 70.5,
+            },
+        )
+
+        entry_id = created.get_json()["entry"]["id"]
+
+        response = self.client.delete(
+            "/api/entries/weight/{}".format(entry_id)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get_json(),
+            {"deleted": True},
+        )
+
+        again = self.client.delete(
+            "/api/entries/weight/{}".format(entry_id)
+        )
+
+        self.assertEqual(again.status_code, 404)
+
+        listing = self.client.get(
+            "/api/entries/weight"
+        )
+
+        self.assertEqual(
+            listing.get_json()["entries"],
+            [],
+        )
+
     def test_schema_defines_collections_and_indexes(self):
         self.assertEqual(
             ENTRIES_COLLECTION,
@@ -127,6 +165,12 @@ class WellnessTrackerTestCase(unittest.TestCase):
             "users_by_email",
         )
         self.assertTrue(user_index["unique"])
+
+        self.assertEqual(
+            GOALS_COLLECTION,
+            "goals",
+        )
+        self.assertTrue(GOAL_INDEXES[0]["unique"])
 
     def test_schema_rejects_missing_payload_fields(self):
         errors = validate_entry_document_shape(
