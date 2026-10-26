@@ -245,6 +245,16 @@ class WellnessTrackerTestCase(unittest.TestCase):
             response.get_data(as_text=True),
         )
 
+    def test_nav_marks_current_page(self):
+        body = self.client.get("/steps").get_data(as_text=True)
+
+        self.assertIn('href="/steps" aria-current="page"', body)
+        self.assertNotIn('href="/water" aria-current="page"', body)
+
+        home = self.client.get("/").get_data(as_text=True)
+
+        self.assertIn('href="/" aria-current="page"', home)
+
     def test_unknown_feature_returns_not_found(self):
         response = self.client.get(
             "/api/entries/sleep"
