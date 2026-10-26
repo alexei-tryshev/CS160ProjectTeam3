@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 DEFAULT_USER_ID = "demo-user"
 
-DEFAULT_WATER_GOAL_ML = 2000
+DEFAULT_WATER_GOAL_OZ = 64
 
 FEATURES: Dict[str, Dict[str, Any]] = {
     "nutrition": {
@@ -22,7 +22,7 @@ FEATURES: Dict[str, Dict[str, Any]] = {
         "label": "Water intake tracking",
         "description": "Record the amount of water consumed on a date.",
         "fields": [
-            {"name": "amount_ml", "label": "Amount (mL)", "type": "number", "required": True, "step": "1"},
+            {"name": "amount_oz", "label": "Amount (fl oz)", "type": "number", "required": True, "step": "1"},
             {"name": "date", "label": "Date", "type": "date", "required": True},
         ],
     },
@@ -38,7 +38,7 @@ FEATURES: Dict[str, Dict[str, Any]] = {
         "label": "Weight tracking",
         "description": "Record a body-weight measurement on a date.",
         "fields": [
-            {"name": "weight_kg", "label": "Weight (kg)", "type": "number", "required": True, "step": "0.1"},
+            {"name": "weight_lb", "label": "Weight (lb)", "type": "number", "required": True, "step": "0.1"},
             {"name": "date", "label": "Date", "type": "date", "required": True},
         ],
     },

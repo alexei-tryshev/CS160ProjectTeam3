@@ -63,7 +63,7 @@ class WellnessTrackerTestCase(unittest.TestCase):
             "/api/entries/weight",
             json={
                 "date": "2026-10-15",
-                "weight_kg": 70.5,
+                "weight_lb": 170.5,
             },
         )
 
@@ -73,8 +73,8 @@ class WellnessTrackerTestCase(unittest.TestCase):
 
         self.assertEqual(entry["feature"], "weight")
         self.assertEqual(
-            entry["data"]["weight_kg"],
-            70.5,
+            entry["data"]["weight_lb"],
+            170.5,
         )
         self.assertEqual(
             entry["date"],
@@ -102,7 +102,7 @@ class WellnessTrackerTestCase(unittest.TestCase):
             "/api/entries/weight",
             json={
                 "date": "2026-10-15",
-                "weight_kg": 70.5,
+                "weight_lb": 170.5,
             },
         )
 
@@ -188,7 +188,7 @@ class WellnessTrackerTestCase(unittest.TestCase):
         )
 
         self.assertIn(
-            "Missing data field: amount_ml.",
+            "Missing data field: amount_oz.",
             errors,
         )
 
@@ -200,7 +200,7 @@ class WellnessTrackerTestCase(unittest.TestCase):
                 "date": "2026-10-15",
                 "data": {
                     "date": "2026-10-16",
-                    "weight_kg": 70.5,
+                    "weight_lb": 170.5,
                 },
                 "created_at": (
                     "2026-10-15T16:00:00+00:00"
@@ -234,14 +234,14 @@ class WellnessTrackerTestCase(unittest.TestCase):
             "/water",
             data={
                 "date": "2026-10-15",
-                "amount_ml": "750",
+                "amount_oz": "24",
             },
             follow_redirects=True,
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(
-            "750",
+            "24",
             response.get_data(as_text=True),
         )
 

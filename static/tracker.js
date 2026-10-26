@@ -32,14 +32,14 @@ document.querySelectorAll("button[data-amount]").forEach(function (button) {
 
     var dataset = isWater
         ? {
-            label: "Total (mL)",
-            data: points.map(function (point) { return point.total_ml; }),
+            label: "Total (fl oz)",
+            data: points.map(function (point) { return point.total_oz; }),
             backgroundColor: accent,
             borderRadius: 4
         }
         : {
-            label: "Weight (kg)",
-            data: points.map(function (point) { return point.weight_kg; }),
+            label: "Weight (lb)",
+            data: points.map(function (point) { return point.weight_lb; }),
             borderColor: accent,
             backgroundColor: accent,
             tension: 0.25,

@@ -37,8 +37,8 @@ RANGE_LABELS = {
 }
 
 
-@weight_bp.app_template_filter("signed_kg")
-def signed_kg(value):
+@weight_bp.app_template_filter("signed_change")
+def signed_change(value):
     return format_change(value)
 
 
@@ -116,7 +116,7 @@ def page():
         chart=[
             {
                 "date": entry["date"],
-                "weight_kg": entry["data"]["weight_kg"],
+                "weight_lb": entry["data"]["weight_lb"],
             }
             for entry in window_entries
         ],

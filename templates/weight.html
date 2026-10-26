@@ -18,8 +18,8 @@
             {% if editing %}
                 <input type="hidden" name="entry_id" value="{{ form.entry_id }}">
             {% endif %}
-            <label for="weight_kg">Weight (kg)</label>
-            <input id="weight_kg" name="weight_kg" type="number" value="{{ form.get('weight_kg', '') }}" min="0.1" step="0.1" placeholder="e.g. 68.5" required>
+            <label for="weight_lb">Weight (lb)</label>
+            <input id="weight_lb" name="weight_lb" type="number" value="{{ form.get('weight_lb', '') }}" min="0.1" step="0.1" placeholder="e.g. 150.5" required>
             <label for="date">Date</label>
             <input id="date" name="date" type="date" value="{{ form.get('date', '') }}" required>
             {{ form_buttons(editing, url_for('weight.page')) }}
@@ -38,16 +38,16 @@
         <div class="tiles">
             <div class="tile">
                 <p class="tile-label">Latest</p>
-                <p class="tile-value">{{ "%.1f"|format(latest) if latest is not none else "—" }} kg</p>
+                <p class="tile-value">{{ "%.1f"|format(latest) if latest is not none else "—" }} lb</p>
             </div>
             <div class="tile">
                 <p class="tile-label">Change (period)</p>
-                <p class="tile-value">{{ period|signed_kg }} kg</p>
+                <p class="tile-value">{{ period|signed_change }} lb</p>
             </div>
         </div>
         <div class="chart-box">
             {% if chart %}
-                <canvas id="trend-chart" role="img" aria-label="Line chart of weight in kilograms over the selected period"></canvas>
+                <canvas id="trend-chart" role="img" aria-label="Line chart of weight in pounds over the selected period"></canvas>
             {% else %}
                 <p class="chart-empty">No weight entries in this period yet.</p>
             {% endif %}
@@ -64,7 +64,7 @@
                 <thead>
                     <tr>
                         <th scope="col">Date</th>
-                        <th scope="col">Weight (kg)</th>
+                        <th scope="col">Weight (lb)</th>
                         <th scope="col">Change</th>
                         <th scope="col" class="actions">Actions</th>
                     </tr>
@@ -73,8 +73,8 @@
                     {% for entry in entries %}
                         <tr>
                             <td>{{ entry.date }}</td>
-                            <td>{{ "%.1f"|format(entry.data.weight_kg) }}</td>
-                            <td>{{ changes.get(entry.id)|signed_kg }}</td>
+                            <td>{{ "%.1f"|format(entry.data.weight_lb) }}</td>
+                            <td>{{ changes.get(entry.id)|signed_change }}</td>
                             <td class="actions">
                                 {{ entry_actions(url_for('weight.page', edit=entry.id), url_for('weight.delete', entry_id=entry.id)) }}
                             </td>

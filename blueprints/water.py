@@ -16,7 +16,7 @@ from blueprints.entry_actions import (
     repository,
     save_entry_form,
 )
-from features import DEFAULT_USER_ID, DEFAULT_WATER_GOAL_ML
+from features import DEFAULT_USER_ID, DEFAULT_WATER_GOAL_OZ
 from summaries import (
     daily_totals,
     goal_percent,
@@ -67,12 +67,12 @@ def page():
         today.isoformat(),
     )
 
-    goal_ml = (
+    goal_oz = (
         repository().get_water_goal(DEFAULT_USER_ID)
-        or DEFAULT_WATER_GOAL_ML
+        or DEFAULT_WATER_GOAL_OZ
     )
     today_total = total_for_date(week_entries, today.isoformat())
-    percent = goal_percent(today_total, goal_ml)
+    percent = goal_percent(today_total, goal_oz)
 
     entries = repository().list_entries(
         "water",
@@ -86,7 +86,7 @@ def page():
         editing=bool(form.get("entry_id")),
         entries=entries,
         today_total=today_total,
-        goal_ml=goal_ml,
+        goal_oz=goal_oz,
         percent=percent,
         bar_percent=min(percent, 100),
         chart=daily_totals(week_entries, today),
@@ -102,14 +102,14 @@ def delete(entry_id: str):
 
 @water_bp.post("/water/goal")
 def goal():
-    goal_ml, errors = validate_goal(request.form.to_dict())
+    goal_oz, errors = validate_goal(request.form.to_dict())
 
     for error in errors:
         flash(error, "error")
 
     if not errors:
         try:
-            repository().set_water_goal(DEFAULT_USER_ID, goal_ml)
+            repository().set_water_goal(DEFAULT_USER_ID, goal_oz)
         except ValueError as exc:
             flash(str(exc), "error")
         else:

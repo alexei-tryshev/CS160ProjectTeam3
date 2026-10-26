@@ -34,8 +34,8 @@ def _decimal(
     return number
 
 
-MAX_WATER_AMOUNT_ML = 10000
-MAX_WATER_GOAL_ML = 20000
+MAX_WATER_AMOUNT_OZ = 350
+MAX_WATER_GOAL_OZ = 700
 
 
 def _whole_number(
@@ -117,13 +117,13 @@ def validate_entry(
         )
 
     elif feature == "water":
-        payload["amount_ml"] = _whole_number(
+        payload["amount_oz"] = _whole_number(
             raw,
-            "amount_ml",
+            "amount_oz",
             "Amount",
             errors,
-            maximum=MAX_WATER_AMOUNT_ML,
-            unit=" mL",
+            maximum=MAX_WATER_AMOUNT_OZ,
+            unit=" fl oz",
         )
 
     elif feature == "steps":
@@ -132,9 +132,9 @@ def validate_entry(
         )
 
     elif feature == "weight":
-        payload["weight_kg"] = _decimal(
+        payload["weight_lb"] = _decimal(
             raw,
-            "weight_kg",
+            "weight_lb",
             "Weight",
             errors,
             minimum=0.0,
@@ -148,9 +148,9 @@ def validate_entry(
 def validate_goal(
     raw: Dict[str, Any],
 ) -> Tuple[Optional[int], List[str]]:
-    """Return the daily water goal in mL and user-readable errors."""
+    """Return the daily water goal in fl oz and user-readable errors."""
 
-    value = _text(raw, "water_goal_ml")
+    value = _text(raw, "water_goal_oz")
 
     try:
         goal = int(value)
@@ -162,9 +162,9 @@ def validate_goal(
             "Daily goal must be a whole number greater than zero."
         ]
 
-    if goal > MAX_WATER_GOAL_ML:
+    if goal > MAX_WATER_GOAL_OZ:
         return None, [
-            "Daily goal must be at most {:,} mL.".format(MAX_WATER_GOAL_ML)
+            "Daily goal must be at most {:,} fl oz.".format(MAX_WATER_GOAL_OZ)
         ]
 
     return goal, []

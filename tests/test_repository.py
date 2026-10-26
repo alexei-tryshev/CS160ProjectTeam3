@@ -18,9 +18,9 @@ class RepositoryContract:
 
     def test_list_entries_in_range_is_inclusive_and_ascending(self):
         for d in ["2026-10-01", "2026-10-03", "2026-10-05", "2026-10-07"]:
-            self.repo.create_entry("water", "u1", {"date": d, "amount_ml": 100})
-        self.repo.create_entry("water", "u2", {"date": "2026-10-03", "amount_ml": 1})
-        self.repo.create_entry("weight", "u1", {"date": "2026-10-03", "weight_kg": 70.0})
+            self.repo.create_entry("water", "u1", {"date": d, "amount_oz": 100})
+        self.repo.create_entry("water", "u2", {"date": "2026-10-03", "amount_oz": 1})
+        self.repo.create_entry("weight", "u1", {"date": "2026-10-03", "weight_lb": 170.0})
 
         dates = [
             entry["date"]
@@ -34,12 +34,12 @@ class RepositoryContract:
 
     def test_list_entries_in_range_has_no_twenty_entry_cap(self):
         for i in range(25):
-            self.repo.create_entry("water", "u1", {"date": "2026-10-01", "amount_ml": i})
+            self.repo.create_entry("water", "u1", {"date": "2026-10-01", "amount_oz": i})
 
         self.assertEqual(len(self.repo.list_entries_in_range("water", "u1")), 25)
 
     def test_delete_entry_removes_only_matching_entry(self):
-        entry = self.repo.create_entry("water", "u1", {"date": "2026-10-01", "amount_ml": 250})
+        entry = self.repo.create_entry("water", "u1", {"date": "2026-10-01", "amount_oz": 8})
 
         self.assertFalse(self.repo.delete_entry(entry["id"], "weight", "u1"))
         self.assertFalse(self.repo.delete_entry(entry["id"], "water", "u2"))
@@ -49,14 +49,14 @@ class RepositoryContract:
 
     def test_water_goal_defaults_to_none_then_persists_and_updates(self):
         self.assertIsNone(self.repo.get_water_goal("u1"))
-        self.assertEqual(self.repo.set_water_goal("u1", 2500), 2500)
-        self.assertEqual(self.repo.set_water_goal("u1", 3000), 3000)
-        self.assertEqual(self.repo.get_water_goal("u1"), 3000)
+        self.assertEqual(self.repo.set_water_goal("u1", 80), 80)
+        self.assertEqual(self.repo.set_water_goal("u1", 96), 96)
+        self.assertEqual(self.repo.get_water_goal("u1"), 96)
         self.assertIsNone(self.repo.get_water_goal("u2"))
 
     def test_rejects_integers_too_large_for_mongodb(self):
         with self.assertRaises(ValueError):
-            self.repo.create_entry("water", "u1", {"date": "2026-10-01", "amount_ml": 2 ** 63})
+            self.repo.create_entry("water", "u1", {"date": "2026-10-01", "amount_oz": 2 ** 63})
 
         with self.assertRaises(ValueError):
             self.repo.set_water_goal("u1", 2 ** 63)

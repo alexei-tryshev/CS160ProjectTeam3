@@ -22,7 +22,7 @@ FEATURE_PAYLOAD_FIELDS: Dict[str, Tuple[str, ...]] = {
     ),
     "water": (
         "date",
-        "amount_ml",
+        "amount_oz",
     ),
     "steps": (
         "date",
@@ -30,7 +30,7 @@ FEATURE_PAYLOAD_FIELDS: Dict[str, Tuple[str, ...]] = {
     ),
     "weight": (
         "date",
-        "weight_kg",
+        "weight_lb",
     ),
 }
 
@@ -88,7 +88,7 @@ USER_REQUIRED_FIELDS = (
 
 GOAL_REQUIRED_FIELDS = (
     "user_id",
-    "water_goal_ml",
+    "water_goal_oz",
     "updated_at",
 )
 
@@ -252,11 +252,11 @@ def validate_entry_document_shape(
                 )
 
     elif feature == "water":
-        amount = data.get("amount_ml")
+        amount = data.get("amount_oz")
 
         if not _valid_non_negative_integer(amount):
             errors.append(
-                "The data.amount_ml field must be a non-negative integer."
+                "The data.amount_oz field must be a non-negative integer."
             )
 
     elif feature == "steps":
@@ -268,11 +268,11 @@ def validate_entry_document_shape(
             )
 
     elif feature == "weight":
-        weight = data.get("weight_kg")
+        weight = data.get("weight_lb")
 
         if not _valid_number(weight) or weight <= 0:
             errors.append(
-                "The data.weight_kg field must be greater than zero."
+                "The data.weight_lb field must be greater than zero."
             )
 
     return errors
@@ -334,11 +334,11 @@ def validate_goal_document_shape(
             "The user_id field must be a non-empty string."
         )
 
-    water_goal_ml = document.get("water_goal_ml")
+    water_goal_oz = document.get("water_goal_oz")
 
-    if not _valid_non_negative_integer(water_goal_ml) or water_goal_ml == 0:
+    if not _valid_non_negative_integer(water_goal_oz) or water_goal_oz == 0:
         errors.append(
-            "The water_goal_ml field must be a whole number greater than zero."
+            "The water_goal_oz field must be a whole number greater than zero."
         )
 
     if not _valid_timestamp(document.get("updated_at")):

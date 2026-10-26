@@ -88,11 +88,11 @@ def _user_document(
 
 def _goal_document(
     user_id: str,
-    water_goal_ml: int,
+    water_goal_oz: int,
 ) -> Dict[str, Any]:
     return {
         "user_id": user_id,
-        "water_goal_ml": water_goal_ml,
+        "water_goal_oz": water_goal_oz,
         "updated_at": _utc_now(),
     }
 
@@ -342,23 +342,23 @@ class InMemoryRepository:
         if goal is None:
             return None
 
-        return goal["water_goal_ml"]
+        return goal["water_goal_oz"]
 
     def set_water_goal(
         self,
         user_id: str,
-        water_goal_ml: int,
+        water_goal_oz: int,
     ) -> int:
         document = _goal_document(
             user_id,
-            water_goal_ml,
+            water_goal_oz,
         )
 
         _raise_goal_validation_error(document)
 
         self._goals[user_id] = document
 
-        return water_goal_ml
+        return water_goal_oz
 
     def update_entry(
         self,
@@ -708,16 +708,16 @@ class MongoRepository:
         if document is None:
             return None
 
-        return document["water_goal_ml"]
+        return document["water_goal_oz"]
 
     def set_water_goal(
         self,
         user_id: str,
-        water_goal_ml: int,
+        water_goal_oz: int,
     ) -> int:
         document = _goal_document(
             user_id,
-            water_goal_ml,
+            water_goal_oz,
         )
 
         _raise_goal_validation_error(document)
@@ -728,7 +728,7 @@ class MongoRepository:
             upsert=True,
         )
 
-        return water_goal_ml
+        return water_goal_oz
 
     def update_entry(
         self,

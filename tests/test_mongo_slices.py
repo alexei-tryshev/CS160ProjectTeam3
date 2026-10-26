@@ -39,63 +39,63 @@ class MongoVerticalSliceTestCase(unittest.TestCase):
         self.client = self.app.test_client()
 
     def test_water_slice_round_trip(self):
-        self.client.post("/water", data={"date": TODAY, "amount_ml": "750"})
+        self.client.post("/water", data={"date": TODAY, "amount_oz": "33"})
 
         doc = self.repo.collection.find_one({"feature": "water", "user_id": "demo-user"})
 
-        self.assertEqual(doc["data"], {"date": TODAY, "amount_ml": 750})
+        self.assertEqual(doc["data"], {"date": TODAY, "amount_oz": 33})
         self.assertEqual(self.repo.database.name, TEST_DB_NAME)
-        self.assertIn("750", self.client.get("/water").get_data(as_text=True))
+        self.assertIn("<td>33</td>", self.client.get("/water").get_data(as_text=True))
 
         entry_id = str(doc["_id"])
 
         self.client.post(
             "/water",
-            data={"entry_id": entry_id, "date": TODAY, "amount_ml": "900"},
+            data={"entry_id": entry_id, "date": TODAY, "amount_oz": "37"},
         )
 
         self.assertEqual(
-            self.repo.collection.find_one({"_id": doc["_id"]})["data"]["amount_ml"],
-            900,
+            self.repo.collection.find_one({"_id": doc["_id"]})["data"]["amount_oz"],
+            37,
         )
 
-        self.client.post("/water/goal", data={"water_goal_ml": "2500"})
+        self.client.post("/water/goal", data={"water_goal_oz": "80"})
 
         self.assertEqual(
-            self.repo.goals_collection.find_one({"user_id": "demo-user"})["water_goal_ml"],
-            2500,
+            self.repo.goals_collection.find_one({"user_id": "demo-user"})["water_goal_oz"],
+            80,
         )
 
         body = self.client.get("/water").get_data(as_text=True)
 
-        self.assertIn("900", body)
-        self.assertIn("/ 2,500 mL", body)
+        self.assertIn("<td>37</td>", body)
+        self.assertIn("/ 80 fl oz", body)
 
         self.client.post(f"/water/entries/{entry_id}/delete")
 
         self.assertIsNone(self.repo.collection.find_one({"_id": doc["_id"]}))
 
     def test_weight_slice_round_trip(self):
-        self.client.post("/weight", data={"date": YESTERDAY, "weight_kg": "69.3"})
-        self.client.post("/weight", data={"date": TODAY, "weight_kg": "68.5"})
+        self.client.post("/weight", data={"date": YESTERDAY, "weight_lb": "169.3"})
+        self.client.post("/weight", data={"date": TODAY, "weight_lb": "168.5"})
 
         docs = list(self.repo.collection.find({"feature": "weight"}).sort("date", 1))
 
-        self.assertEqual([doc["data"]["weight_kg"] for doc in docs], [69.3, 68.5])
+        self.assertEqual([doc["data"]["weight_lb"] for doc in docs], [169.3, 168.5])
 
         body = self.client.get("/weight").get_data(as_text=True)
 
-        self.assertIn("68.5 kg", body)
-        self.assertIn("−0.8 kg", body)
+        self.assertIn("168.5 lb", body)
+        self.assertIn("−0.8 lb", body)
 
         self.client.post(
             "/weight",
-            data={"entry_id": str(docs[1]["_id"]), "date": TODAY, "weight_kg": "68.9"},
+            data={"entry_id": str(docs[1]["_id"]), "date": TODAY, "weight_lb": "168.9"},
         )
 
         self.assertEqual(
-            self.repo.collection.find_one({"_id": docs[1]["_id"]})["data"]["weight_kg"],
-            68.9,
+            self.repo.collection.find_one({"_id": docs[1]["_id"]})["data"]["weight_lb"],
+            168.9,
         )
 
         self.client.post(f"/weight/entries/{docs[0]['_id']}/delete")
@@ -103,11 +103,11 @@ class MongoVerticalSliceTestCase(unittest.TestCase):
         self.assertEqual(self.repo.collection.count_documents({"feature": "weight"}), 1)
 
     def test_api_reads_back_what_the_form_stored(self):
-        self.client.post("/water", data={"date": TODAY, "amount_ml": "300"})
+        self.client.post("/water", data={"date": TODAY, "amount_oz": "12"})
 
         entries = self.client.get("/api/entries/water").get_json()["entries"]
 
-        self.assertEqual(entries[0]["data"]["amount_ml"], 300)
+        self.assertEqual(entries[0]["data"]["amount_oz"], 12)
 
 
 if __name__ == "__main__":

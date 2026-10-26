@@ -31,7 +31,7 @@ def window_start(days: Optional[int], today: date) -> Optional[str]:
 
 def total_for_date(entries: List[Dict[str, Any]], day: str) -> int:
     return sum(
-        entry["data"]["amount_ml"]
+        entry["data"]["amount_oz"]
         for entry in entries
         if entry["date"] == day
     )
@@ -47,7 +47,7 @@ def daily_totals(
     return [
         {
             "date": day,
-            "total_ml": total_for_date(entries, day),
+            "total_oz": total_for_date(entries, day),
         }
         for day in (
             (today - timedelta(days=offset)).isoformat()
@@ -56,8 +56,8 @@ def daily_totals(
     ]
 
 
-def goal_percent(total_ml: int, goal_ml: int) -> int:
-    return round(100 * total_ml / goal_ml)
+def goal_percent(total_oz: int, goal_oz: int) -> int:
+    return round(100 * total_oz / goal_oz)
 
 
 def weight_changes(
@@ -69,7 +69,7 @@ def weight_changes(
     previous = None
 
     for entry in _chronological(entries):
-        weight = entry["data"]["weight_kg"]
+        weight = entry["data"]["weight_lb"]
         changes[entry["id"]] = (
             None if previous is None else round(weight - previous, 1)
         )
@@ -82,7 +82,7 @@ def latest_weight(entries: List[Dict[str, Any]]) -> Optional[float]:
     if not entries:
         return None
 
-    return _chronological(entries)[-1]["data"]["weight_kg"]
+    return _chronological(entries)[-1]["data"]["weight_lb"]
 
 
 def period_change(entries: List[Dict[str, Any]]) -> Optional[float]:
@@ -92,7 +92,7 @@ def period_change(entries: List[Dict[str, Any]]) -> Optional[float]:
     ordered = _chronological(entries)
 
     return round(
-        ordered[-1]["data"]["weight_kg"] - ordered[0]["data"]["weight_kg"],
+        ordered[-1]["data"]["weight_lb"] - ordered[0]["data"]["weight_lb"],
         1,
     )
 

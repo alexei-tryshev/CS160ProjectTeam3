@@ -20,14 +20,14 @@
             {% endif %}
             <p class="field-label">Quick add</p>
             <div class="quick-add">
-                {% for amount in [250, 500, 750] %}
-                    <button class="btn btn-secondary" type="button" data-amount="{{ amount }}" data-target="amount_ml">+{{ amount }} mL</button>
+                {% for amount in [8, 16, 24] %}
+                    <button class="btn btn-secondary" type="button" data-amount="{{ amount }}" data-target="amount_oz">+{{ amount }} fl oz</button>
                 {% endfor %}
             </div>
             <div class="field-row">
                 <div class="field">
-                    <label for="amount_ml">Amount (mL)</label>
-                    <input id="amount_ml" name="amount_ml" type="number" value="{{ form.get('amount_ml', '') }}" min="0" step="1" placeholder="e.g. 350" required>
+                    <label for="amount_oz">Amount (fl oz)</label>
+                    <input id="amount_oz" name="amount_oz" type="number" value="{{ form.get('amount_oz', '') }}" min="0" step="1" placeholder="e.g. 12" required>
                 </div>
                 <div class="field">
                     <label for="date">Date</label>
@@ -40,7 +40,7 @@
 
     <section class="card" aria-labelledby="today-heading">
         <h2 id="today-heading">Today</h2>
-        <p class="stat-big">{{ "{:,}".format(today_total) }} <small>/ {{ "{:,}".format(goal_ml) }} mL</small></p>
+        <p class="stat-big">{{ "{:,}".format(today_total) }} <small>/ {{ "{:,}".format(goal_oz) }} fl oz</small></p>
         <div class="progress" role="progressbar" aria-label="Progress toward daily goal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ bar_percent }}">
             <div class="progress-bar" style="width: {{ bar_percent }}%"></div>
         </div>
@@ -49,7 +49,7 @@
             <details class="goal-form">
                 <summary>Edit goal</summary>
                 <form method="post" action="{{ url_for('water.goal') }}">
-                    <input name="water_goal_ml" type="number" value="{{ goal_ml }}" min="1" step="1" aria-label="Daily goal (mL)" required>
+                    <input name="water_goal_oz" type="number" value="{{ goal_oz }}" min="1" step="1" aria-label="Daily goal (fl oz)" required>
                     <button class="btn btn-primary" type="submit">Save</button>
                 </form>
             </details>
@@ -69,7 +69,7 @@
                 <thead>
                     <tr>
                         <th scope="col">Date</th>
-                        <th scope="col">Amount (mL)</th>
+                        <th scope="col">Amount (fl oz)</th>
                         <th scope="col" class="actions">Actions</th>
                     </tr>
                 </thead>
@@ -77,7 +77,7 @@
                     {% for entry in entries %}
                         <tr>
                             <td>{{ entry.date }}</td>
-                            <td>{{ "{:,}".format(entry.data.amount_ml) }}</td>
+                            <td>{{ "{:,}".format(entry.data.amount_oz) }}</td>
                             <td class="actions">
                                 {{ entry_actions(url_for('water.page', edit=entry.id), url_for('water.delete', entry_id=entry.id)) }}
                             </td>
