@@ -127,3 +127,22 @@ def validate_entry(
         errors.append("Unknown feature.")
 
     return payload, errors
+
+def validate_goal(
+    raw: Dict[str, Any],
+) -> Tuple[Optional[int], List[str]]:
+    """Return the daily water goal in mL and user-readable errors."""
+
+    value = _text(raw, "water_goal_ml")
+
+    try:
+        goal = int(value)
+    except ValueError:
+        goal = 0
+
+    if goal <= 0:
+        return None, [
+            "Daily goal must be a whole number greater than zero."
+        ]
+
+    return goal, []
