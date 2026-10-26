@@ -15,7 +15,7 @@
                 ("nutrition", "Nutrition", url_for('tracking.feature_page', feature='nutrition')),
                 ("water", "Water", url_for('water.page')),
                 ("steps", "Steps", url_for('tracking.feature_page', feature='steps')),
-                ("weight", "Weight", url_for('tracking.feature_page', feature='weight')),
+                ("weight", "Weight", url_for('weight.page')),
             ] %}
                 <a href="{{ href }}"{% if active_page == key %} aria-current="page"{% endif %}>{{ label }}</a>
             {% endfor %}
