@@ -13,7 +13,7 @@
             {% for key, label, href in [
                 ("dashboard", "Dashboard", url_for('main.home')),
                 ("nutrition", "Nutrition", url_for('tracking.feature_page', feature='nutrition')),
-                ("water", "Water", url_for('tracking.feature_page', feature='water')),
+                ("water", "Water", url_for('water.page')),
                 ("steps", "Steps", url_for('tracking.feature_page', feature='steps')),
                 ("weight", "Weight", url_for('tracking.feature_page', feature='weight')),
             ] %}

@@ -11,6 +11,7 @@ from blueprints.api import api_bp
 from blueprints.auth import auth_bp
 from blueprints.main import main_bp
 from blueprints.tracking import tracking_bp
+from blueprints.water import water_bp
 from repository import InMemoryRepository, MongoRepository
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -110,6 +111,7 @@ def create_app(test_config: Dict[str, Any] = None) -> Flask:
     # Register all Flask Blueprints.
     app.register_blueprint(main_bp)
     app.register_blueprint(tracking_bp)
+    app.register_blueprint(water_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
 
