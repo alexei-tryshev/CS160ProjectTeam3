@@ -200,6 +200,25 @@ class WaterPageTestCase(unittest.TestCase):
             {"date": date.today().isoformat(), "total_ml": 400},
         )
 
+    def test_oversized_amount_and_goal_are_rejected_with_messages(self):
+        response = self.client.post(
+            "/water",
+            data={"date": "2026-10-15", "amount_ml": "99999999999999999999"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Amount must be at most 10,000 mL.", response.get_data(as_text=True))
+        self.assertEqual(self.repo.list_entries("water", "demo-user"), [])
+
+        body = self.client.post(
+            "/water/goal",
+            data={"water_goal_ml": "20001"},
+            follow_redirects=True,
+        ).get_data(as_text=True)
+
+        self.assertIn("Daily goal must be at most 20,000 mL.", body)
+        self.assertIsNone(self.repo.get_water_goal("demo-user"))
+
 
 if __name__ == "__main__":
     unittest.main()

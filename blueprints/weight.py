@@ -103,7 +103,13 @@ def page():
         editing=bool(form.get("entry_id")),
         entries=entries,
         changes=weight_changes(all_entries),
-        latest=latest_weight(all_entries),
+        latest=latest_weight(
+            [
+                entry
+                for entry in all_entries
+                if entry["date"] <= today.isoformat()
+            ]
+        ),
         period=period_change(window_entries),
         range_key=range_key,
         range_labels=RANGE_LABELS,

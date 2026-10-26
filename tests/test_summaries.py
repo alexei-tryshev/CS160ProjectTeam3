@@ -10,7 +10,7 @@ from summaries import (
     weight_changes,
     window_start,
 )
-from validation import validate_goal
+from validation import validate_entry, validate_goal
 
 
 def e(entry_id, entry_date, created_at="2026-10-01T00:00:00+00:00", **data):
@@ -94,6 +94,12 @@ class SummaryTestCase(unittest.TestCase):
                 errors,
                 ["Daily goal must be a whole number greater than zero."],
             )
+
+    def test_validate_entry_normalizes_compact_iso_dates(self):
+        payload, errors = validate_entry("water", {"date": "20261024", "amount_ml": "1"})
+
+        self.assertEqual(errors, [])
+        self.assertEqual(payload["date"], "2026-10-24")
 
 
 if __name__ == "__main__":

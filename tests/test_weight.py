@@ -94,6 +94,16 @@ class WeightPageTestCase(unittest.TestCase):
         self.assertIn("70.0 kg", body)  # Latest uses all entries
         self.assertIn("— kg", body)     # no period change in 1W
 
+    def test_future_dated_entry_does_not_become_latest(self):
+        self.add(1, 68.8)
+        self.add(0, 68.5)
+        self.add(-400, 99.0)
+
+        body = self.client.get("/weight").get_data(as_text=True)
+
+        self.assertIn("68.5 kg", body)
+        self.assertNotIn("99.0 kg", body)
+
     def test_save_edit_delete_and_not_found(self):
         response = self.client.post(
             "/weight",

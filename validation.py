@@ -34,11 +34,17 @@ def _decimal(
     return number
 
 
+MAX_WATER_AMOUNT_ML = 10000
+MAX_WATER_GOAL_ML = 20000
+
+
 def _whole_number(
     raw: Dict[str, Any],
     name: str,
     label: str,
     errors: List[str],
+    maximum: Optional[int] = None,
+    unit: str = "",
 ) -> int:
     value = _text(raw, name)
 
@@ -54,6 +60,10 @@ def _whole_number(
 
     if number < 0:
         errors.append("{} cannot be negative.".format(label))
+    elif maximum is not None and number > maximum:
+        errors.append(
+            "{} must be at most {:,}{}.".format(label, maximum, unit)
+        )
 
     return number
 
@@ -62,7 +72,9 @@ def _date(raw: Dict[str, Any], errors: List[str]) -> str:
     value = _text(raw, "date") or date.today().isoformat()
 
     try:
-        date.fromisoformat(value)
+        # Normalize accepted variants such as 20261024 so stored dates
+        # always sort and compare as YYYY-MM-DD strings.
+        return date.fromisoformat(value).isoformat()
     except ValueError:
         errors.append("Date must use YYYY-MM-DD format.")
 
@@ -106,7 +118,12 @@ def validate_entry(
 
     elif feature == "water":
         payload["amount_ml"] = _whole_number(
-            raw, "amount_ml", "Amount", errors
+            raw,
+            "amount_ml",
+            "Amount",
+            errors,
+            maximum=MAX_WATER_AMOUNT_ML,
+            unit=" mL",
         )
 
     elif feature == "steps":
@@ -143,6 +160,11 @@ def validate_goal(
     if goal <= 0:
         return None, [
             "Daily goal must be a whole number greater than zero."
+        ]
+
+    if goal > MAX_WATER_GOAL_ML:
+        return None, [
+            "Daily goal must be at most {:,} mL.".format(MAX_WATER_GOAL_ML)
         ]
 
     return goal, []

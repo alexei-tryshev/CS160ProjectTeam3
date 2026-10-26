@@ -54,6 +54,16 @@ class RepositoryContract:
         self.assertEqual(self.repo.get_water_goal("u1"), 3000)
         self.assertIsNone(self.repo.get_water_goal("u2"))
 
+    def test_rejects_integers_too_large_for_mongodb(self):
+        with self.assertRaises(ValueError):
+            self.repo.create_entry("water", "u1", {"date": "2026-10-01", "amount_ml": 2 ** 63})
+
+        with self.assertRaises(ValueError):
+            self.repo.set_water_goal("u1", 2 ** 63)
+
+        self.assertEqual(self.repo.list_entries("water", "u1"), [])
+        self.assertIsNone(self.repo.get_water_goal("u1"))
+
     def test_set_water_goal_rejects_invalid_values(self):
         for bad in (0, -5, 2.5, True):
             with self.assertRaises(ValueError):

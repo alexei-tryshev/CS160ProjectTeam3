@@ -4,6 +4,9 @@ from typing import Any, Dict, List, Tuple
 
 
 USERS_COLLECTION = "users"
+
+# Largest integer BSON can store (signed 64-bit).
+MAX_BSON_INT = 2 ** 63 - 1
 ENTRIES_COLLECTION = "entries"
 GOALS_COLLECTION = "goals"
 
@@ -130,7 +133,7 @@ def _valid_non_negative_integer(value: Any) -> bool:
     return (
         isinstance(value, int)
         and not isinstance(value, bool)
-        and value >= 0
+        and 0 <= value <= MAX_BSON_INT
     )
 
 
