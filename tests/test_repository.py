@@ -2,6 +2,7 @@ import unittest
 
 from repository import InMemoryRepository
 from tests.mongo_support import (
+    close_after_test,
     drop_test_database,
     mongo_repository_or_skip,
 )
@@ -73,7 +74,7 @@ class MongoRepositoryTests(RepositoryContract, unittest.TestCase):
         repository = mongo_repository_or_skip()
         drop_test_database(repository)
         repository.ensure_indexes()
-        self.addCleanup(drop_test_database, repository)
+        close_after_test(self, repository)
         return repository
 
 
