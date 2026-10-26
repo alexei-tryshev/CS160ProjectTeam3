@@ -3,6 +3,8 @@ from typing import Any, Dict
 
 DEFAULT_USER_ID = "demo-user"
 
+DEFAULT_WATER_GOAL_ML = 2000
+
 FEATURES: Dict[str, Dict[str, Any]] = {
     "nutrition": {
         "label": "Nutrition tracking",

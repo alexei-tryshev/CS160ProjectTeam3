@@ -128,6 +128,78 @@ class WaterPageTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("Entry not found.", response.get_data(as_text=True))
 
+    def test_today_card_shows_total_against_default_goal(self):
+        today = date.today().isoformat()
+
+        self.repo.create_entry("water", "demo-user", {"date": today, "amount_ml": 1000})
+        self.repo.create_entry("water", "demo-user", {"date": today, "amount_ml": 750})
+        self.repo.create_entry("water", "demo-user", {"date": "2000-01-01", "amount_ml": 999})
+
+        body = self.client.get("/water").get_data(as_text=True)
+
+        self.assertIn("1,750", body)
+        self.assertIn("/ 2,000 mL", body)
+        self.assertIn("88% of daily goal", body)
+        self.assertIn('style="width: 88%"', body)
+        self.assertIn("Edit goal", body)
+
+    def test_progress_bar_caps_at_full_when_goal_exceeded(self):
+        self.repo.create_entry(
+            "water", "demo-user", {"date": date.today().isoformat(), "amount_ml": 3000}
+        )
+
+        body = self.client.get("/water").get_data(as_text=True)
+
+        self.assertIn("150% of daily goal", body)
+        self.assertIn('style="width: 100%"', body)
+
+    def test_goal_update_persists(self):
+        response = self.client.post(
+            "/water/goal",
+            data={"water_goal_ml": "2500"},
+            follow_redirects=True,
+        )
+
+        body = response.get_data(as_text=True)
+
+        self.assertIn("Daily goal updated.", body)
+        self.assertIn("/ 2,500 mL", body)
+        self.assertEqual(self.repo.get_water_goal("demo-user"), 2500)
+
+    def test_invalid_goal_is_rejected_and_goal_unchanged(self):
+        self.repo.set_water_goal("demo-user", 2500)
+
+        for bad in ("", "0", "-5", "2.5", "abc"):
+            body = self.client.post(
+                "/water/goal",
+                data={"water_goal_ml": bad},
+                follow_redirects=True,
+            ).get_data(as_text=True)
+
+            self.assertIn("Daily goal must be a whole number greater than zero.", body)
+
+        self.assertEqual(self.repo.get_water_goal("demo-user"), 2500)
+
+    def test_chart_data_has_seven_daily_totals(self):
+        self.repo.create_entry(
+            "water", "demo-user", {"date": date.today().isoformat(), "amount_ml": 400}
+        )
+
+        body = self.client.get("/water").get_data(as_text=True)
+
+        self.assertIn('data-chart="water-bar"', body)
+        self.assertIn("chart.js@4.4.1", body)
+
+        payload = json.loads(
+            re.search(r'id="chart-data"[^>]*>(.*?)</script>', body, re.S).group(1)
+        )
+
+        self.assertEqual(len(payload), 7)
+        self.assertEqual(
+            payload[-1],
+            {"date": date.today().isoformat(), "total_ml": 400},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

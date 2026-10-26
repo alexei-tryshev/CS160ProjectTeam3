@@ -40,6 +40,24 @@
 
     <section class="card" aria-labelledby="today-heading">
         <h2 id="today-heading">Today</h2>
+        <p class="stat-big">{{ "{:,}".format(today_total) }} <small>/ {{ "{:,}".format(goal_ml) }} mL</small></p>
+        <div class="progress" role="progressbar" aria-label="Progress toward daily goal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ bar_percent }}">
+            <div class="progress-bar" style="width: {{ bar_percent }}%"></div>
+        </div>
+        <div class="progress-caption">
+            {{ percent }}% of daily goal ·
+            <details class="goal-form">
+                <summary>Edit goal</summary>
+                <form method="post" action="{{ url_for('water.goal') }}">
+                    <input name="water_goal_ml" type="number" value="{{ goal_ml }}" min="1" step="1" aria-label="Daily goal (mL)" required>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </form>
+            </details>
+        </div>
+        <div class="chart-box">
+            <canvas id="trend-chart" role="img" aria-label="Bar chart of daily water totals for the last 7 days"></canvas>
+        </div>
+        <script type="application/json" id="chart-data" data-chart="water-bar">{{ chart|tojson }}</script>
     </section>
 </div>
 
@@ -74,5 +92,6 @@
 </section>
 {% endblock %}
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 <script src="{{ url_for('static', filename='tracker.js') }}" defer></script>
 {% endblock %}
