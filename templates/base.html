@@ -2,13 +2,31 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Wellness Tracker{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>
+        {% block title %}
+            Wellness Tracker
+        {% endblock %}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
 </head>
+
 <body>
     <header class="site-header">
-        <a class="brand" href="{{ url_for('main.home') }}">Wellness Tracker</a>
+        <a
+            class="brand"
+            href="{{ url_for('main.home') }}"
+        >
+            Wellness Tracker
+        </a>
+
         <nav aria-label="Primary navigation">
             {% for key, label, href in [
                 ("dashboard", "Dashboard", url_for('main.home')),
@@ -21,14 +39,23 @@
             {% endfor %}
         </nav>
     </header>
+
     <main class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% with messages =
+            get_flashed_messages(with_categories=true)
+        %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <p class="message {{ category }}" role="status">{{ message }}</p>
+                    <p
+                        class="message {{ category }}"
+                        role="status"
+                    >
+                        {{ message }}
+                    </p>
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
         {% block content %}{% endblock %}
     </main>
     {% block scripts %}{% endblock %}
