@@ -6,9 +6,12 @@ from uuid import uuid4
 from schema import (
     ENTRIES_COLLECTION,
     ENTRY_INDEXES,
+    GOAL_INDEXES,
+    GOALS_COLLECTION,
     USER_INDEXES,
     USERS_COLLECTION,
     validate_entry_document_shape,
+    validate_goal_document_shape,
     validate_user_document_shape,
 )
 
@@ -37,10 +40,11 @@ def _normalize_email(email: Any) -> Any:
 def _to_object_id(value: str):
 
     from bson import ObjectId
+    from bson.errors import InvalidId
 
     try:
         return ObjectId(str(value))
-    except (TypeError, ValueError):
+    except (InvalidId, TypeError, ValueError):
         return None
 
 
@@ -80,6 +84,44 @@ def _user_document(
         "password_hash": password_hash,
         "created_at": created_at or _utc_now(),
     }
+
+
+def _goal_document(
+    user_id: str,
+    water_goal_oz: int,
+) -> Dict[str, Any]:
+    return {
+        "user_id": user_id,
+        "water_goal_oz": water_goal_oz,
+        "updated_at": _utc_now(),
+    }
+
+
+def _raise_goal_validation_error(
+    document: Dict[str, Any],
+) -> None:
+    errors = validate_goal_document_shape(document)
+
+    if errors:
+        raise ValueError(
+            "Invalid goal data: {}".format(
+                " ".join(errors)
+            )
+        )
+
+
+def _in_date_range(
+    value: str,
+    start_date: Optional[str],
+    end_date: Optional[str],
+) -> bool:
+    if start_date is not None and value < start_date:
+        return False
+
+    if end_date is not None and value > end_date:
+        return False
+
+    return True
 
 
 def validate_entry_data(
@@ -167,6 +209,7 @@ class InMemoryRepository:
     def __init__(self) -> None:
         self._entries: List[Dict[str, Any]] = []
         self._users: List[Dict[str, Any]] = []
+        self._goals: Dict[str, Dict[str, Any]] = {}
 
     def create_entry(
         self,
@@ -244,6 +287,78 @@ class InMemoryRepository:
         return deepcopy(
             entries[:_limit_value(limit)]
         )
+
+    def list_entries_in_range(
+        self,
+        feature: str,
+        user_id: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        entries = [
+            entry
+            for entry in self._entries
+            if entry["feature"] == feature
+            and entry["user_id"] == user_id
+            and _in_date_range(
+                entry["date"],
+                start_date,
+                end_date,
+            )
+        ]
+
+        entries.sort(
+            key=lambda item: (
+                item["date"],
+                item["created_at"],
+            )
+        )
+
+        return deepcopy(entries)
+
+    def delete_entry(
+        self,
+        entry_id: str,
+        feature: str,
+        user_id: str,
+    ) -> bool:
+        for index, entry in enumerate(self._entries):
+            if (
+                entry["id"] == str(entry_id)
+                and entry["feature"] == feature
+                and entry["user_id"] == user_id
+            ):
+                del self._entries[index]
+                return True
+
+        return False
+
+    def get_water_goal(
+        self,
+        user_id: str,
+    ) -> Optional[int]:
+        goal = self._goals.get(user_id)
+
+        if goal is None:
+            return None
+
+        return goal["water_goal_oz"]
+
+    def set_water_goal(
+        self,
+        user_id: str,
+        water_goal_oz: int,
+    ) -> int:
+        document = _goal_document(
+            user_id,
+            water_goal_oz,
+        )
+
+        _raise_goal_validation_error(document)
+
+        self._goals[user_id] = document
+
+        return water_goal_oz
 
     def update_entry(
         self,
@@ -410,6 +525,10 @@ class MongoRepository:
             USERS_COLLECTION
         ]
 
+        self.goals_collection = self.database[
+            GOALS_COLLECTION
+        ]
+
     def ping(self) -> None:
         self.client.admin.command("ping")
         self.ensure_indexes()
@@ -423,6 +542,13 @@ class MongoRepository:
 
         for index in USER_INDEXES:
             self.users_collection.create_index(
+                index["keys"],
+                name=index["name"],
+                unique=index.get("unique", False),
+            )
+
+        for index in GOAL_INDEXES:
+            self.goals_collection.create_index(
                 index["keys"],
                 name=index["name"],
                 unique=index.get("unique", False),
@@ -514,6 +640,95 @@ class MongoRepository:
             _serialize_document(document)
             for document in documents
         ]
+
+    def list_entries_in_range(
+        self,
+        feature: str,
+        user_id: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        query: Dict[str, Any] = {
+            "feature": feature,
+            "user_id": user_id,
+        }
+
+        date_bounds: Dict[str, str] = {}
+
+        if start_date is not None:
+            date_bounds["$gte"] = start_date
+
+        if end_date is not None:
+            date_bounds["$lte"] = end_date
+
+        if date_bounds:
+            query["date"] = date_bounds
+
+        documents = self.collection.find(query).sort(
+            [
+                ("date", 1),
+                ("created_at", 1),
+            ]
+        )
+
+        return [
+            _serialize_document(document)
+            for document in documents
+        ]
+
+    def delete_entry(
+        self,
+        entry_id: str,
+        feature: str,
+        user_id: str,
+    ) -> bool:
+        object_id = _to_object_id(entry_id)
+
+        if object_id is None:
+            return False
+
+        result = self.collection.delete_one(
+            {
+                "_id": object_id,
+                "feature": feature,
+                "user_id": user_id,
+            }
+        )
+
+        return result.deleted_count == 1
+
+    def get_water_goal(
+        self,
+        user_id: str,
+    ) -> Optional[int]:
+        document = self.goals_collection.find_one(
+            {"user_id": user_id}
+        )
+
+        if document is None:
+            return None
+
+        return document["water_goal_oz"]
+
+    def set_water_goal(
+        self,
+        user_id: str,
+        water_goal_oz: int,
+    ) -> int:
+        document = _goal_document(
+            user_id,
+            water_goal_oz,
+        )
+
+        _raise_goal_validation_error(document)
+
+        self.goals_collection.update_one(
+            {"user_id": user_id},
+            {"$set": document},
+            upsert=True,
+        )
+
+        return water_goal_oz
 
     def update_entry(
         self,

@@ -4,7 +4,11 @@ from typing import Any, Dict, List, Tuple
 
 
 USERS_COLLECTION = "users"
+
+# Largest integer BSON can store (signed 64-bit).
+MAX_BSON_INT = 2 ** 63 - 1
 ENTRIES_COLLECTION = "entries"
+GOALS_COLLECTION = "goals"
 
 
 FEATURE_PAYLOAD_FIELDS: Dict[str, Tuple[str, ...]] = {
@@ -18,7 +22,7 @@ FEATURE_PAYLOAD_FIELDS: Dict[str, Tuple[str, ...]] = {
     ),
     "water": (
         "date",
-        "amount_ml",
+        "amount_oz",
     ),
     "steps": (
         "date",
@@ -26,7 +30,7 @@ FEATURE_PAYLOAD_FIELDS: Dict[str, Tuple[str, ...]] = {
     ),
     "weight": (
         "date",
-        "weight_kg",
+        "weight_lb",
     ),
 }
 
@@ -59,6 +63,15 @@ USER_INDEXES: List[Dict[str, Any]] = [
 ]
 
 
+GOAL_INDEXES: List[Dict[str, Any]] = [
+    {
+        "keys": [("user_id", 1)],
+        "name": "goals_by_user",
+        "unique": True,
+    },
+]
+
+
 ENTRY_REQUIRED_FIELDS = (
     "feature",
     "user_id",
@@ -71,6 +84,12 @@ USER_REQUIRED_FIELDS = (
     "email",
     "password_hash",
     "created_at",
+)
+
+GOAL_REQUIRED_FIELDS = (
+    "user_id",
+    "water_goal_oz",
+    "updated_at",
 )
 
 
@@ -114,7 +133,7 @@ def _valid_non_negative_integer(value: Any) -> bool:
     return (
         isinstance(value, int)
         and not isinstance(value, bool)
-        and value >= 0
+        and 0 <= value <= MAX_BSON_INT
     )
 
 
@@ -233,11 +252,11 @@ def validate_entry_document_shape(
                 )
 
     elif feature == "water":
-        amount = data.get("amount_ml")
+        amount = data.get("amount_oz")
 
         if not _valid_non_negative_integer(amount):
             errors.append(
-                "The data.amount_ml field must be a non-negative integer."
+                "The data.amount_oz field must be a non-negative integer."
             )
 
     elif feature == "steps":
@@ -249,11 +268,11 @@ def validate_entry_document_shape(
             )
 
     elif feature == "weight":
-        weight = data.get("weight_kg")
+        weight = data.get("weight_lb")
 
         if not _valid_number(weight) or weight <= 0:
             errors.append(
-                "The data.weight_kg field must be greater than zero."
+                "The data.weight_lb field must be greater than zero."
             )
 
     return errors
@@ -291,6 +310,40 @@ def validate_user_document_shape(
     if not _valid_timestamp(document.get("created_at")):
         errors.append(
             "The user created_at field must be an ISO-8601 timestamp."
+        )
+
+    return errors
+
+
+def validate_goal_document_shape(
+    document: Dict[str, Any],
+) -> List[str]:
+
+    errors: List[str] = []
+
+    for field in GOAL_REQUIRED_FIELDS:
+        if field not in document:
+            errors.append(
+                "Missing goal field: {}.".format(field)
+            )
+
+    user_id = document.get("user_id")
+
+    if not isinstance(user_id, str) or not user_id.strip():
+        errors.append(
+            "The user_id field must be a non-empty string."
+        )
+
+    water_goal_oz = document.get("water_goal_oz")
+
+    if not _valid_non_negative_integer(water_goal_oz) or water_goal_oz == 0:
+        errors.append(
+            "The water_goal_oz field must be a whole number greater than zero."
+        )
+
+    if not _valid_timestamp(document.get("updated_at")):
+        errors.append(
+            "The goal updated_at field must be an ISO-8601 timestamp."
         )
 
     return errors
