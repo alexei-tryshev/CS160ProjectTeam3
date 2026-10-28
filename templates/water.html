@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "_tracker_macros.html" import entry_actions, form_buttons, form_errors %}
+{% set active_page = "water" %}
+{% block title %}Water intake | Wellness Tracker{% endblock %}
+{% block content %}
+<header class="page-header">
+    <a class="back-link" href="{{ url_for('main.home') }}">← Back to dashboard</a>
+    <h1>Water intake</h1>
+    <p class="subtitle">Record the amount of water you drink each day.</p>
+</header>
+
+{{ form_errors(errors) }}
+
+<div class="card-grid">
+    <section class="card" aria-labelledby="log-heading">
+        <h2 id="log-heading">{% if editing %}Edit entry{% else %}Log water{% endif %}</h2>
+        <form method="post" action="{{ url_for('water.page') }}" class="entry-form">
+            {% if editing %}
+                <input type="hidden" name="entry_id" value="{{ form.entry_id }}">
+            {% endif %}
+            <p class="field-label">Quick add</p>
+            <div class="quick-add">
+                {% for amount in [8, 16, 24] %}
+                    <button class="btn btn-secondary" type="button" data-amount="{{ amount }}" data-target="amount_oz">+{{ amount }} fl oz</button>
+                {% endfor %}
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="amount_oz">Amount (fl oz)</label>
+                    <input id="amount_oz" name="amount_oz" type="number" value="{{ form.get('amount_oz', '') }}" min="0" step="1" placeholder="e.g. 12" required>
+                </div>
+                <div class="field">
+                    <label for="date">Date</label>
+                    <input id="date" name="date" type="date" value="{{ form.get('date', '') }}" required>
+                </div>
+            </div>
+            {{ form_buttons(editing, url_for('water.page')) }}
+        </form>
+    </section>
+
+    <section class="card" aria-labelledby="today-heading">
+        <h2 id="today-heading">Today</h2>
+        <p class="stat-big">{{ "{:,}".format(today_total) }} <small>/ {{ "{:,}".format(goal_oz) }} fl oz</small></p>
+        <div class="progress" role="progressbar" aria-label="Progress toward daily goal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ bar_percent }}">
+            <div class="progress-bar" style="width: {{ bar_percent }}%"></div>
+        </div>
+        <div class="progress-caption">
+            {{ percent }}% of daily goal ·
+            <details class="goal-form">
+                <summary>Edit goal</summary>
+                <form method="post" action="{{ url_for('water.goal') }}">
+                    <input name="water_goal_oz" type="number" value="{{ goal_oz }}" min="1" step="1" aria-label="Daily goal (fl oz)" required>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </form>
+            </details>
+        </div>
+        <div class="chart-box">
+            <canvas id="trend-chart" role="img" aria-label="Bar chart of daily water totals for the last 7 days"></canvas>
+        </div>
+        <script type="application/json" id="chart-data" data-chart="water-bar">{{ chart|tojson }}</script>
+    </section>
+</div>
+
+<section class="card" aria-labelledby="entries-heading">
+    <h2 id="entries-heading">Recent entries</h2>
+    {% if entries %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Amount (fl oz)</th>
+                        <th scope="col" class="actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                        <tr>
+                            <td>{{ entry.date }}</td>
+                            <td>{{ "{:,}".format(entry.data.amount_oz) }}</td>
+                            <td class="actions">
+                                {{ entry_actions(url_for('water.page', edit=entry.id), url_for('water.delete', entry_id=entry.id)) }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty-state">No entries yet. Add the first one above.</p>
+    {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script src="{{ url_for('static', filename='tracker.js') }}" defer></script>
+{% endblock %}

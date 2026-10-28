@@ -4,6 +4,8 @@ from app import create_app
 from schema import (
     ENTRIES_COLLECTION,
     ENTRY_INDEXES,
+    GOAL_INDEXES,
+    GOALS_COLLECTION,
     USER_INDEXES,
     USERS_COLLECTION,
     validate_entry_document_shape,
@@ -61,7 +63,7 @@ class WellnessTrackerTestCase(unittest.TestCase):
             "/api/entries/weight",
             json={
                 "date": "2026-10-15",
-                "weight_kg": 70.5,
+                "weight_lb": 170.5,
             },
         )
 
@@ -71,8 +73,8 @@ class WellnessTrackerTestCase(unittest.TestCase):
 
         self.assertEqual(entry["feature"], "weight")
         self.assertEqual(
-            entry["data"]["weight_kg"],
-            70.5,
+            entry["data"]["weight_lb"],
+            170.5,
         )
         self.assertEqual(
             entry["date"],
@@ -93,6 +95,42 @@ class WellnessTrackerTestCase(unittest.TestCase):
         self.assertEqual(
             len(listing.get_json()["entries"]),
             1,
+        )
+
+    def test_api_deletes_entry(self):
+        created = self.client.post(
+            "/api/entries/weight",
+            json={
+                "date": "2026-10-15",
+                "weight_lb": 170.5,
+            },
+        )
+
+        entry_id = created.get_json()["entry"]["id"]
+
+        response = self.client.delete(
+            "/api/entries/weight/{}".format(entry_id)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get_json(),
+            {"deleted": True},
+        )
+
+        again = self.client.delete(
+            "/api/entries/weight/{}".format(entry_id)
+        )
+
+        self.assertEqual(again.status_code, 404)
+
+        listing = self.client.get(
+            "/api/entries/weight"
+        )
+
+        self.assertEqual(
+            listing.get_json()["entries"],
+            [],
         )
 
     def test_schema_defines_collections_and_indexes(self):
@@ -128,6 +166,12 @@ class WellnessTrackerTestCase(unittest.TestCase):
         )
         self.assertTrue(user_index["unique"])
 
+        self.assertEqual(
+            GOALS_COLLECTION,
+            "goals",
+        )
+        self.assertTrue(GOAL_INDEXES[0]["unique"])
+
     def test_schema_rejects_missing_payload_fields(self):
         errors = validate_entry_document_shape(
             {
@@ -144,7 +188,7 @@ class WellnessTrackerTestCase(unittest.TestCase):
         )
 
         self.assertIn(
-            "Missing data field: amount_ml.",
+            "Missing data field: amount_oz.",
             errors,
         )
 
@@ -156,7 +200,7 @@ class WellnessTrackerTestCase(unittest.TestCase):
                 "date": "2026-10-15",
                 "data": {
                     "date": "2026-10-16",
-                    "weight_kg": 70.5,
+                    "weight_lb": 170.5,
                 },
                 "created_at": (
                     "2026-10-15T16:00:00+00:00"
@@ -190,16 +234,26 @@ class WellnessTrackerTestCase(unittest.TestCase):
             "/water",
             data={
                 "date": "2026-10-15",
-                "amount_ml": "750",
+                "amount_oz": "24",
             },
             follow_redirects=True,
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(
-            "750",
+            "24",
             response.get_data(as_text=True),
         )
+
+    def test_nav_marks_current_page(self):
+        body = self.client.get("/steps").get_data(as_text=True)
+
+        self.assertIn('href="/steps" aria-current="page"', body)
+        self.assertNotIn('href="/water" aria-current="page"', body)
+
+        home = self.client.get("/").get_data(as_text=True)
+
+        self.assertIn('href="/" aria-current="page"', home)
 
     def test_unknown_feature_returns_not_found(self):
         response = self.client.get(

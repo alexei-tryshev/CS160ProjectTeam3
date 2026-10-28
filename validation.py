@@ -34,11 +34,17 @@ def _decimal(
     return number
 
 
+MAX_WATER_AMOUNT_OZ = 350
+MAX_WATER_GOAL_OZ = 700
+
+
 def _whole_number(
     raw: Dict[str, Any],
     name: str,
     label: str,
     errors: List[str],
+    maximum: Optional[int] = None,
+    unit: str = "",
 ) -> int:
     value = _text(raw, name)
 
@@ -54,6 +60,10 @@ def _whole_number(
 
     if number < 0:
         errors.append("{} cannot be negative.".format(label))
+    elif maximum is not None and number > maximum:
+        errors.append(
+            "{} must be at most {:,}{}.".format(label, maximum, unit)
+        )
 
     return number
 
@@ -62,7 +72,9 @@ def _date(raw: Dict[str, Any], errors: List[str]) -> str:
     value = _text(raw, "date") or date.today().isoformat()
 
     try:
-        date.fromisoformat(value)
+        # Normalize accepted variants such as 20261024 so stored dates
+        # always sort and compare as YYYY-MM-DD strings.
+        return date.fromisoformat(value).isoformat()
     except ValueError:
         errors.append("Date must use YYYY-MM-DD format.")
 
@@ -105,8 +117,13 @@ def validate_entry(
         )
 
     elif feature == "water":
-        payload["amount_ml"] = _whole_number(
-            raw, "amount_ml", "Amount", errors
+        payload["amount_oz"] = _whole_number(
+            raw,
+            "amount_oz",
+            "Amount",
+            errors,
+            maximum=MAX_WATER_AMOUNT_OZ,
+            unit=" fl oz",
         )
 
     elif feature == "steps":
@@ -115,9 +132,9 @@ def validate_entry(
         )
 
     elif feature == "weight":
-        payload["weight_kg"] = _decimal(
+        payload["weight_lb"] = _decimal(
             raw,
-            "weight_kg",
+            "weight_lb",
             "Weight",
             errors,
             minimum=0.0,
@@ -127,3 +144,27 @@ def validate_entry(
         errors.append("Unknown feature.")
 
     return payload, errors
+
+def validate_goal(
+    raw: Dict[str, Any],
+) -> Tuple[Optional[int], List[str]]:
+    """Return the daily water goal in fl oz and user-readable errors."""
+
+    value = _text(raw, "water_goal_oz")
+
+    try:
+        goal = int(value)
+    except ValueError:
+        goal = 0
+
+    if goal <= 0:
+        return None, [
+            "Daily goal must be a whole number greater than zero."
+        ]
+
+    if goal > MAX_WATER_GOAL_OZ:
+        return None, [
+            "Daily goal must be at most {:,} fl oz.".format(MAX_WATER_GOAL_OZ)
+        ]
+
+    return goal, []
