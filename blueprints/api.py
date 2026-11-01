@@ -1,6 +1,7 @@
 from flask import Blueprint, current_app, jsonify, request
 
-from features import DEFAULT_USER_ID, FEATURES, normalize_feature
+from blueprints.access import current_user_id, require_login_json
+from features import FEATURES, normalize_feature
 from validation import validate_entry
 
 
@@ -15,11 +16,15 @@ def _repository():
     return current_app.extensions["repository"]
 
 
-def _user_id_from_value(value):
-    if not isinstance(value, str) or not value.strip():
+PUBLIC_ENDPOINTS = {"api.health"}
+
+
+@api_bp.before_request
+def _require_login():
+    if request.endpoint in PUBLIC_ENDPOINTS:
         return None
 
-    return value.strip()
+    return require_login_json()
 
 
 @api_bp.get("/health")
@@ -48,17 +53,7 @@ def entries_api(feature: str):
         ), 404
 
     if request.method == "GET":
-        user_id = _user_id_from_value(
-            request.args.get(
-                "user_id",
-                DEFAULT_USER_ID,
-            )
-        )
-
-        if user_id is None:
-            return jsonify(
-                {"error": "user_id is required."}
-            ), 400
+        user_id = current_user_id()
 
         entries = _repository().list_entries(
             feature,
@@ -86,17 +81,10 @@ def entries_api(feature: str):
 
     body = dict(body)
 
-    user_id = _user_id_from_value(
-        body.pop(
-            "user_id",
-            DEFAULT_USER_ID,
-        )
-    )
-
-    if user_id is None:
-        return jsonify(
-            {"errors": ["user_id is required."]}
-        ), 400
+    # Entries always belong to the logged-in user; a client-sent
+    # user_id is ignored.
+    body.pop("user_id", None)
+    user_id = current_user_id()
 
     payload, errors = validate_entry(
         feature,
@@ -134,17 +122,7 @@ def entry_api(feature: str, entry_id: str):
         ), 404
 
     if request.method == "GET":
-        user_id = _user_id_from_value(
-            request.args.get(
-                "user_id",
-                DEFAULT_USER_ID,
-            )
-        )
-
-        if user_id is None:
-            return jsonify(
-                {"error": "user_id is required."}
-            ), 400
+        user_id = current_user_id()
 
         entry = _repository().get_entry(
             entry_id,
@@ -160,17 +138,7 @@ def entry_api(feature: str, entry_id: str):
         return jsonify({"entry": entry})
 
     if request.method == "DELETE":
-        user_id = _user_id_from_value(
-            request.args.get(
-                "user_id",
-                DEFAULT_USER_ID,
-            )
-        )
-
-        if user_id is None:
-            return jsonify(
-                {"error": "user_id is required."}
-            ), 400
+        user_id = current_user_id()
 
         deleted = _repository().delete_entry(
             entry_id,
@@ -198,17 +166,10 @@ def entry_api(feature: str, entry_id: str):
 
     body = dict(body)
 
-    user_id = _user_id_from_value(
-        body.pop(
-            "user_id",
-            DEFAULT_USER_ID,
-        )
-    )
-
-    if user_id is None:
-        return jsonify(
-            {"errors": ["user_id is required."]}
-        ), 400
+    # Entries always belong to the logged-in user; a client-sent
+    # user_id is ignored.
+    body.pop("user_id", None)
+    user_id = current_user_id()
 
     payload, errors = validate_entry(
         feature,

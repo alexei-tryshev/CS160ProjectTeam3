@@ -1,6 +1,7 @@
 import unittest
 
 from app import create_app
+from tests.auth_helpers import log_in
 from schema import (
     ENTRIES_COLLECTION,
     ENTRY_INDEXES,
@@ -24,6 +25,10 @@ class WellnessTrackerTestCase(unittest.TestCase):
         )
 
         self.client = self.app.test_client()
+        self.user_id = log_in(
+            self.client,
+            self.app.extensions["repository"],
+        )
 
     def test_dashboard_links_to_first_wave_features(self):
         response = self.client.get("/")
@@ -176,7 +181,7 @@ class WellnessTrackerTestCase(unittest.TestCase):
         errors = validate_entry_document_shape(
             {
                 "feature": "water",
-                "user_id": "demo-user",
+                "user_id": "user-1",
                 "date": "2026-10-15",
                 "data": {
                     "date": "2026-10-15",
@@ -196,7 +201,7 @@ class WellnessTrackerTestCase(unittest.TestCase):
         errors = validate_entry_document_shape(
             {
                 "feature": "weight",
-                "user_id": "demo-user",
+                "user_id": "user-1",
                 "date": "2026-10-15",
                 "data": {
                     "date": "2026-10-16",

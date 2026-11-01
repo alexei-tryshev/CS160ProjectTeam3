@@ -9,6 +9,7 @@ from flask import (
     url_for,
 )
 
+from blueprints.access import current_user_id, require_login
 from blueprints.entry_actions import (
     delete_entry_and_flash,
     entry_form_values,
@@ -16,7 +17,7 @@ from blueprints.entry_actions import (
     repository,
     save_entry_form,
 )
-from features import DEFAULT_USER_ID, DEFAULT_WATER_GOAL_OZ
+from features import DEFAULT_WATER_GOAL_OZ
 from summaries import (
     daily_totals,
     goal_percent,
@@ -27,6 +28,7 @@ from validation import validate_goal
 
 
 water_bp = Blueprint("water", __name__)
+water_bp.before_request(require_login)
 
 
 @water_bp.route(
@@ -62,13 +64,13 @@ def page():
 
     week_entries = repository().list_entries_in_range(
         "water",
-        DEFAULT_USER_ID,
+        current_user_id(),
         window_start(7, today),
         today.isoformat(),
     )
 
     goal_oz = (
-        repository().get_water_goal(DEFAULT_USER_ID)
+        repository().get_water_goal(current_user_id())
         or DEFAULT_WATER_GOAL_OZ
     )
     today_total = total_for_date(week_entries, today.isoformat())
@@ -76,7 +78,7 @@ def page():
 
     entries = repository().list_entries(
         "water",
-        DEFAULT_USER_ID,
+        current_user_id(),
     )
 
     return render_template(
@@ -109,7 +111,7 @@ def goal():
 
     if not errors:
         try:
-            repository().set_water_goal(DEFAULT_USER_ID, goal_oz)
+            repository().set_water_goal(current_user_id(), goal_oz)
         except ValueError as exc:
             flash(str(exc), "error")
         else:

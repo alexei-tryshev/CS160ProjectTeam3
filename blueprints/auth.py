@@ -9,6 +9,7 @@ from flask import (
     session,
     url_for,
 )
+from blueprints.access import safe_next_path
 from werkzeug.security import (
     check_password_hash,
     generate_password_hash,
@@ -256,8 +257,9 @@ def login():
                 )
 
                 return redirect(
-                    url_for("main.home")
-                )
+                safe_next_path(request.args.get("next"))
+                or url_for("main.home")
+            )
 
         if errors:
             status = 400
@@ -282,5 +284,5 @@ def logout():
     )
 
     return redirect(
-        url_for("main.home")
+        url_for("auth.login")
     )

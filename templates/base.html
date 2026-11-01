@@ -30,6 +30,7 @@
         </a>
 
         <nav aria-label="Primary navigation">
+            {% if session.get("user_id") %}
             {% for key, label, href in [
                 (
                     "dashboard",
@@ -64,14 +65,12 @@
                 )
             ] %}
                 <a
-                    href="{{ href }}"
-                    {% if active_page == key %}
-                        aria-current="page"
-                    {% endif %}
+                    href="{{ href }}"{% if active_page == key %} aria-current="page"{% endif %}
                 >
                     {{ label }}
                 </a>
             {% endfor %}
+            {% endif %}
 
             {% if session.get("user_id") %}
                 <form

@@ -9,6 +9,7 @@ import unittest
 from datetime import date, timedelta
 
 from app import create_app
+from tests.auth_helpers import log_in
 from tests.mongo_support import (
     TEST_DB_NAME,
     close_after_test,
@@ -37,11 +38,12 @@ class MongoVerticalSliceTestCase(unittest.TestCase):
         )
 
         self.client = self.app.test_client()
+        self.user_id = log_in(self.client, self.repo)
 
     def test_water_slice_round_trip(self):
         self.client.post("/water", data={"date": TODAY, "amount_oz": "33"})
 
-        doc = self.repo.collection.find_one({"feature": "water", "user_id": "demo-user"})
+        doc = self.repo.collection.find_one({"feature": "water", "user_id": self.user_id})
 
         self.assertEqual(doc["data"], {"date": TODAY, "amount_oz": 33})
         self.assertEqual(self.repo.database.name, TEST_DB_NAME)
@@ -62,7 +64,7 @@ class MongoVerticalSliceTestCase(unittest.TestCase):
         self.client.post("/water/goal", data={"water_goal_oz": "80"})
 
         self.assertEqual(
-            self.repo.goals_collection.find_one({"user_id": "demo-user"})["water_goal_oz"],
+            self.repo.goals_collection.find_one({"user_id": self.user_id})["water_goal_oz"],
             80,
         )
 

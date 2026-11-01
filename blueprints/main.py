@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template
 
+from blueprints.access import require_login
 from features import FEATURES
 
 
 main_bp = Blueprint("main", __name__)
+main_bp.before_request(require_login)
 
 
 @main_bp.app_context_processor

@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from flask import current_app, flash
 
-from features import DEFAULT_USER_ID
+from blueprints.access import current_user_id
 from validation import validate_entry
 
 
@@ -29,7 +29,7 @@ def load_entry_for_edit(
     return repository().get_entry(
         entry_id,
         feature,
-        DEFAULT_USER_ID,
+        current_user_id(),
     )
 
 
@@ -55,7 +55,7 @@ def save_entry_form(
             updated = repository().update_entry(
                 entry_id,
                 feature,
-                DEFAULT_USER_ID,
+                current_user_id(),
                 payload,
             )
 
@@ -66,7 +66,7 @@ def save_entry_form(
         else:
             repository().create_entry(
                 feature,
-                DEFAULT_USER_ID,
+                current_user_id(),
                 payload,
             )
 
@@ -81,7 +81,7 @@ def delete_entry_and_flash(feature: str, entry_id: str) -> None:
     deleted = repository().delete_entry(
         entry_id,
         feature,
-        DEFAULT_USER_ID,
+        current_user_id(),
     )
 
     if deleted:
