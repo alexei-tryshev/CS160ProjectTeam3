@@ -111,6 +111,13 @@ class LoggedOutAccessTestCase(unittest.TestCase):
         self.assertNotIn('href="/water"', body)
         self.assertIn('href="/auth/register"', body)
 
+    def test_auth_pages_have_no_dead_end_dashboard_link(self):
+        for path in ("/auth/login", "/auth/register"):
+            with self.subTest(path=path):
+                body = self.client.get(path).get_data(as_text=True)
+
+                self.assertNotIn("Back to dashboard", body)
+
 
 class UserIsolationTestCase(unittest.TestCase):
 
