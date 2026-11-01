@@ -9,8 +9,8 @@ from flask import (
     url_for,
 )
 
+from blueprints.access import current_user_id, require_login
 from features import (
-    DEFAULT_USER_ID,
     FEATURES,
     normalize_feature,
 )
@@ -21,6 +21,7 @@ tracking_bp = Blueprint(
     "tracking",
     __name__,
 )
+tracking_bp.before_request(require_login)
 
 
 def _repository():
@@ -55,7 +56,7 @@ def feature_page(feature: str):
             try:
                 _repository().create_entry(
                     feature,
-                    DEFAULT_USER_ID,
+                    current_user_id(),
                     payload,
                 )
             except ValueError as exc:
@@ -75,7 +76,7 @@ def feature_page(feature: str):
 
     entries = _repository().list_entries(
         feature,
-        DEFAULT_USER_ID,
+        current_user_id(),
     )
 
     return render_template(

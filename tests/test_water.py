@@ -4,6 +4,7 @@ import unittest
 from datetime import date
 
 from app import create_app
+from tests.auth_helpers import log_in
 
 
 class WaterPageTestCase(unittest.TestCase):
@@ -19,6 +20,7 @@ class WaterPageTestCase(unittest.TestCase):
 
         self.client = self.app.test_client()
         self.repo = self.app.extensions["repository"]
+        self.user_id = log_in(self.client, self.repo)
 
     def test_page_has_wireframe_copy_and_quick_add_buttons(self):
         body = self.client.get("/water").get_data(as_text=True)
@@ -47,7 +49,7 @@ class WaterPageTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
 
-        entries = self.repo.list_entries("water", "demo-user")
+        entries = self.repo.list_entries("water", self.user_id)
 
         self.assertEqual(entries[0]["data"], {"date": "2026-10-15", "amount_oz": 24})
         self.assertIn("Entry saved.", self.client.get("/water").get_data(as_text=True))
@@ -60,11 +62,11 @@ class WaterPageTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("Amount cannot be negative.", response.get_data(as_text=True))
-        self.assertEqual(self.repo.list_entries("water", "demo-user"), [])
+        self.assertEqual(self.repo.list_entries("water", self.user_id), [])
 
     def test_edit_mode_prefills_and_update_changes_existing_entry(self):
         entry = self.repo.create_entry(
-            "water", "demo-user", {"date": "2026-10-15", "amount_oz": 16}
+            "water", self.user_id, {"date": "2026-10-15", "amount_oz": 16}
         )
 
         body = self.client.get(f"/water?edit={entry['id']}").get_data(as_text=True)
@@ -79,14 +81,14 @@ class WaterPageTestCase(unittest.TestCase):
             data={"entry_id": entry["id"], "date": "2026-10-16", "amount_oz": "20"},
         )
 
-        entries = self.repo.list_entries("water", "demo-user")
+        entries = self.repo.list_entries("water", self.user_id)
 
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0]["data"], {"date": "2026-10-16", "amount_oz": 20})
 
     def test_delete_removes_entry_with_confirm_prompt(self):
         entry = self.repo.create_entry(
-            "water", "demo-user", {"date": "2026-10-15", "amount_oz": 16}
+            "water", self.user_id, {"date": "2026-10-15", "amount_oz": 16}
         )
 
         body = self.client.get("/water").get_data(as_text=True)
@@ -100,11 +102,11 @@ class WaterPageTestCase(unittest.TestCase):
         )
 
         self.assertIn("Entry deleted.", response.get_data(as_text=True))
-        self.assertEqual(self.repo.list_entries("water", "demo-user"), [])
+        self.assertEqual(self.repo.list_entries("water", self.user_id), [])
 
     def test_unknown_and_cross_feature_ids_show_not_found(self):
         weight = self.repo.create_entry(
-            "weight", "demo-user", {"date": "2026-10-15", "weight_lb": 170.0}
+            "weight", self.user_id, {"date": "2026-10-15", "weight_lb": 170.0}
         )
 
         response = self.client.get("/water?edit=nope")
@@ -118,7 +120,7 @@ class WaterPageTestCase(unittest.TestCase):
         )
 
         self.assertIn("Entry not found.", response.get_data(as_text=True))
-        self.assertIsNotNone(self.repo.get_entry(weight["id"], "weight", "demo-user"))
+        self.assertIsNotNone(self.repo.get_entry(weight["id"], "weight", self.user_id))
 
         response = self.client.post(
             "/water",
@@ -131,9 +133,9 @@ class WaterPageTestCase(unittest.TestCase):
     def test_today_card_shows_total_against_default_goal(self):
         today = date.today().isoformat()
 
-        self.repo.create_entry("water", "demo-user", {"date": today, "amount_oz": 40})
-        self.repo.create_entry("water", "demo-user", {"date": today, "amount_oz": 16})
-        self.repo.create_entry("water", "demo-user", {"date": "2000-01-01", "amount_oz": 99})
+        self.repo.create_entry("water", self.user_id, {"date": today, "amount_oz": 40})
+        self.repo.create_entry("water", self.user_id, {"date": today, "amount_oz": 16})
+        self.repo.create_entry("water", self.user_id, {"date": "2000-01-01", "amount_oz": 99})
 
         body = self.client.get("/water").get_data(as_text=True)
 
@@ -145,7 +147,7 @@ class WaterPageTestCase(unittest.TestCase):
 
     def test_progress_bar_caps_at_full_when_goal_exceeded(self):
         self.repo.create_entry(
-            "water", "demo-user", {"date": date.today().isoformat(), "amount_oz": 96}
+            "water", self.user_id, {"date": date.today().isoformat(), "amount_oz": 96}
         )
 
         body = self.client.get("/water").get_data(as_text=True)
@@ -164,10 +166,10 @@ class WaterPageTestCase(unittest.TestCase):
 
         self.assertIn("Daily goal updated.", body)
         self.assertIn("/ 80 fl oz", body)
-        self.assertEqual(self.repo.get_water_goal("demo-user"), 80)
+        self.assertEqual(self.repo.get_water_goal(self.user_id), 80)
 
     def test_invalid_goal_is_rejected_and_goal_unchanged(self):
-        self.repo.set_water_goal("demo-user", 80)
+        self.repo.set_water_goal(self.user_id, 80)
 
         for bad in ("", "0", "-5", "2.5", "abc"):
             body = self.client.post(
@@ -178,11 +180,11 @@ class WaterPageTestCase(unittest.TestCase):
 
             self.assertIn("Daily goal must be a whole number greater than zero.", body)
 
-        self.assertEqual(self.repo.get_water_goal("demo-user"), 80)
+        self.assertEqual(self.repo.get_water_goal(self.user_id), 80)
 
     def test_chart_data_has_seven_daily_totals(self):
         self.repo.create_entry(
-            "water", "demo-user", {"date": date.today().isoformat(), "amount_oz": 12}
+            "water", self.user_id, {"date": date.today().isoformat(), "amount_oz": 12}
         )
 
         body = self.client.get("/water").get_data(as_text=True)
@@ -208,7 +210,7 @@ class WaterPageTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("Amount must be at most 350 fl oz.", response.get_data(as_text=True))
-        self.assertEqual(self.repo.list_entries("water", "demo-user"), [])
+        self.assertEqual(self.repo.list_entries("water", self.user_id), [])
 
         body = self.client.post(
             "/water/goal",
@@ -217,7 +219,7 @@ class WaterPageTestCase(unittest.TestCase):
         ).get_data(as_text=True)
 
         self.assertIn("Daily goal must be at most 700 fl oz.", body)
-        self.assertIsNone(self.repo.get_water_goal("demo-user"))
+        self.assertIsNone(self.repo.get_water_goal(self.user_id))
 
 
 if __name__ == "__main__":

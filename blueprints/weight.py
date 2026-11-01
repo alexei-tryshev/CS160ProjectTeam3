@@ -8,6 +8,7 @@ from flask import (
     url_for,
 )
 
+from blueprints.access import current_user_id, require_login
 from blueprints.entry_actions import (
     delete_entry_and_flash,
     entry_form_values,
@@ -15,7 +16,6 @@ from blueprints.entry_actions import (
     repository,
     save_entry_form,
 )
-from features import DEFAULT_USER_ID
 from summaries import (
     DEFAULT_RANGE,
     RANGE_DAYS,
@@ -28,6 +28,7 @@ from summaries import (
 
 
 weight_bp = Blueprint("weight", __name__)
+weight_bp.before_request(require_login)
 
 RANGE_LABELS = {
     "1w": "1W",
@@ -80,7 +81,7 @@ def page():
 
     all_entries = repository().list_entries_in_range(
         "weight",
-        DEFAULT_USER_ID,
+        current_user_id(),
     )
 
     start = window_start(RANGE_DAYS[range_key], today)
@@ -93,7 +94,7 @@ def page():
 
     entries = repository().list_entries(
         "weight",
-        DEFAULT_USER_ID,
+        current_user_id(),
     )
 
     return render_template(

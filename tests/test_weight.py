@@ -4,6 +4,7 @@ import unittest
 from datetime import date, timedelta
 
 from app import create_app
+from tests.auth_helpers import log_in
 
 
 def d(days_ago):
@@ -29,10 +30,11 @@ class WeightPageTestCase(unittest.TestCase):
 
         self.client = self.app.test_client()
         self.repo = self.app.extensions["repository"]
+        self.user_id = log_in(self.client, self.repo)
 
     def add(self, days_ago, weight_lb):
         return self.repo.create_entry(
-            "weight", "demo-user", {"date": d(days_ago), "weight_lb": weight_lb}
+            "weight", self.user_id, {"date": d(days_ago), "weight_lb": weight_lb}
         )
 
     def test_page_copy_and_layout(self):
@@ -112,7 +114,7 @@ class WeightPageTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
 
-        entry = self.repo.list_entries("weight", "demo-user")[0]
+        entry = self.repo.list_entries("weight", self.user_id)[0]
 
         self.assertIn(
             "Update entry",
@@ -125,7 +127,7 @@ class WeightPageTestCase(unittest.TestCase):
         )
 
         self.assertEqual(
-            self.repo.get_entry(entry["id"], "weight", "demo-user")["data"]["weight_lb"],
+            self.repo.get_entry(entry["id"], "weight", self.user_id)["data"]["weight_lb"],
             170.1,
         )
         self.assertEqual(
@@ -139,7 +141,7 @@ class WeightPageTestCase(unittest.TestCase):
 
         self.client.post(f"/weight/entries/{entry['id']}/delete")
 
-        self.assertEqual(self.repo.list_entries("weight", "demo-user"), [])
+        self.assertEqual(self.repo.list_entries("weight", self.user_id), [])
 
 
 if __name__ == "__main__":
