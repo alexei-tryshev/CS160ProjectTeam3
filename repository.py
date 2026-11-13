@@ -15,6 +15,8 @@ from schema import (
     GOALS_COLLECTION,
     GROUP_INDEXES,
     GROUPS_COLLECTION,
+    JOIN_FAILURE_INDEXES,
+    JOIN_FAILURES_COLLECTION,
     USER_INDEXES,
     USERS_COLLECTION,
     validate_entry_document_shape,
@@ -266,6 +268,7 @@ class InMemoryRepository:
         self._users: List[Dict[str, Any]] = []
         self._goals: Dict[str, Dict[str, Any]] = {}
         self._groups: List[Dict[str, Any]] = []
+        self._join_failures: List[Dict[str, Any]] = []
 
     def create_entry(
         self,
@@ -703,6 +706,25 @@ class InMemoryRepository:
         ]
 
 
+    def record_join_failure(
+        self,
+        user_id: str,
+        at: datetime,
+    ) -> None:
+        self._join_failures.append({"user_id": user_id, "at": at})
+
+    def count_join_failures_since(
+        self,
+        user_id: str,
+        since: datetime,
+    ) -> int:
+        return sum(
+            1
+            for failure in self._join_failures
+            if failure["user_id"] == user_id and failure["at"] >= since
+        )
+
+
 class MongoRepository:
 
     def __init__(
@@ -736,6 +758,10 @@ class MongoRepository:
             GROUPS_COLLECTION
         ]
 
+        self.join_failures_collection = self.database[
+            JOIN_FAILURES_COLLECTION
+        ]
+
     def ping(self) -> None:
         self.client.admin.command("ping")
         self.ensure_indexes()
@@ -766,6 +792,17 @@ class MongoRepository:
                 index["keys"],
                 name=index["name"],
                 unique=index.get("unique", False),
+            )
+
+        for index in JOIN_FAILURE_INDEXES:
+            options = {"name": index["name"]}
+
+            if "expire_after_seconds" in index:
+                options["expireAfterSeconds"] = index["expire_after_seconds"]
+
+            self.join_failures_collection.create_index(
+                index["keys"],
+                **options,
             )
 
     def create_entry(
@@ -1320,3 +1357,25 @@ class MongoRepository:
             _serialize_document(document)
             for document in documents
         ]
+
+    def record_join_failure(
+        self,
+        user_id: str,
+        at: datetime,
+    ) -> None:
+        # Stored as a real date (not text) so the expiry index can use it.
+        self.join_failures_collection.insert_one(
+            {"user_id": user_id, "at": at}
+        )
+
+    def count_join_failures_since(
+        self,
+        user_id: str,
+        since: datetime,
+    ) -> int:
+        return self.join_failures_collection.count_documents(
+            {
+                "user_id": user_id,
+                "at": {"$gte": since},
+            }
+        )

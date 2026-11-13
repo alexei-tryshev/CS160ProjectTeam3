@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timedelta, timezone
 
 from groups import (
     JOIN_CODE_ALPHABET,
@@ -43,6 +44,15 @@ class JoinCodeTestCase(unittest.TestCase):
             ["Group name is required."],
         )
         self.assertEqual(validate_group_name({})[1], ["Group name is required."])
+
+        for invisible in ("\u200b", "\u200b \u200b\ufeff", "\u2060\u00a0"):
+            with self.subTest(name=repr(invisible)):
+                self.assertEqual(
+                    validate_group_name({"name": invisible})[1],
+                    ["Group name is required."],
+                )
+
+        self.assertEqual(validate_group_name({"name": "\u200bLab"})[1], [])
         self.assertEqual(
             validate_group_name({"name": "x" * 41})[1],
             ["Group name must be at most 40 characters."],
@@ -74,7 +84,7 @@ class GroupsContract:
         self.assertEqual(self.repo.create_group("  Lab crew ", alice)["name"], "Lab crew")
         self.assertEqual(len(self.repo.create_group("x" * 40, alice)["name"]), 40)
 
-        for bad in ("", "   ", "x" * 41, None):
+        for bad in ("", "   ", "x" * 41, None, "\u200b", "\u200b \ufeff"):
             with self.subTest(name=bad):
                 with self.assertRaises(ValueError):
                     self.repo.create_group(bad, alice)
@@ -221,6 +231,21 @@ class GroupsContract:
             ),
             [],
         )
+
+
+    def test_join_failures_counted_per_user_since_a_time(self):
+        now = datetime(2026, 11, 12, 12, 0, tzinfo=timezone.utc)
+
+        for minutes_ago in (1, 5, 14, 20):
+            self.repo.record_join_failure("alice", now - timedelta(minutes=minutes_ago))
+
+        self.repo.record_join_failure("bob", now)
+
+        since = now - timedelta(minutes=15)
+
+        self.assertEqual(self.repo.count_join_failures_since("alice", since), 3)
+        self.assertEqual(self.repo.count_join_failures_since("bob", since), 1)
+        self.assertEqual(self.repo.count_join_failures_since("carol", since), 0)
 
 
 class InMemoryGroupsTestCase(GroupsContract, unittest.TestCase):

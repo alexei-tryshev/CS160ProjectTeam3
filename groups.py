@@ -1,6 +1,7 @@
 """Join codes and limits for step-competition groups."""
 
 import secrets
+from datetime import timedelta
 from typing import Any
 
 
@@ -11,6 +12,11 @@ JOIN_CODE_LENGTH = 6
 
 MAX_GROUP_MEMBERS = 50
 MAX_GROUP_NAME_LENGTH = 40
+
+# After this many wrong join codes within the window, an account cannot
+# join any group until the window passes. Makes guessing codes impractical.
+MAX_JOIN_FAILURES = 10
+JOIN_FAILURE_WINDOW = timedelta(minutes=15)
 
 
 def generate_join_code() -> str:

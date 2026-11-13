@@ -1,9 +1,10 @@
 import re
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from unittest import mock
 
 from app import create_app
-from groups import MAX_GROUP_MEMBERS
+from groups import JOIN_FAILURE_WINDOW, MAX_GROUP_MEMBERS, MAX_JOIN_FAILURES
 from tests.auth_helpers import log_in
 
 
@@ -354,16 +355,29 @@ class GroupsPageTestCase(unittest.TestCase):
         default = self.alice.get("/groups").get_data(as_text=True)
 
         self.assertIn(
-            'href="/groups?group={}" aria-current="true"'.format(first["id"]),
+            'href="/groups?group={}&amp;period=today" aria-current="true"'.format(first["id"]),
             default,
         )
         self.assertIn(first["join_code"], default)
         self.assertNotIn(second["join_code"], default)
 
+        week = self.view(self.alice, first, "week")
+
+        self.assertIn(
+            'href="/groups?group={}&amp;period=week"'.format(second["id"]),
+            week,
+        )
+        self.assertIn(
+            'href="/groups?group={}&amp;period=week" aria-current="true"'.format(
+                first["id"]
+            ),
+            week,
+        )
+
         other = self.view(self.alice, second)
 
         self.assertIn(
-            'href="/groups?group={}" aria-current="true"'.format(second["id"]),
+            'href="/groups?group={}&amp;period=today" aria-current="true"'.format(second["id"]),
             other,
         )
         self.assertIn(second["join_code"], other)
@@ -408,6 +422,57 @@ class GroupsPageTestCase(unittest.TestCase):
 
         self.assertIn("You joined Roommates.", self.join(bob, group["join_code"]))
         self.assertIn(bob_id, self.repo.get_group(group["id"])["member_ids"])
+
+    def test_too_many_wrong_codes_blocks_joining_for_a_while(self):
+        group = self.create()
+        bob, bob_id = self.as_user("bob@example.com", "Bob")
+        carol, carol_id = self.as_user("carol@example.com", "Carol")
+        start = datetime(2026, 11, 12, 12, 0, tzinfo=timezone.utc)
+
+        with mock.patch("blueprints.groups._now", return_value=start):
+            for _ in range(MAX_JOIN_FAILURES):
+                self.assertIn("No group has that code.", self.join(bob, "ZZZZZZ"))
+
+            # Even the right code is refused while the limit applies.
+            body = self.join(bob, group["join_code"])
+
+            self.assertIn("Too many wrong codes. Try again in a few minutes.", body)
+            self.assertNotIn(bob_id, self.repo.get_group(group["id"])["member_ids"])
+
+            # The limit is per account.
+            self.assertIn("You joined Roommates.", self.join(carol, group["join_code"]))
+
+        later = start + JOIN_FAILURE_WINDOW + timedelta(seconds=1)
+
+        with mock.patch("blueprints.groups._now", return_value=later):
+            self.assertIn("You joined Roommates.", self.join(bob, group["join_code"]))
+
+        self.assertIn(carol_id, self.repo.get_group(group["id"])["member_ids"])
+
+    def test_limit_survives_logging_in_again(self):
+        bob, bob_id = self.as_user("bob@example.com", "Bob")
+
+        for _ in range(MAX_JOIN_FAILURES):
+            self.join(bob, "ZZZZZZ")
+
+        fresh, _ = self.as_user("bob@example.com", "Bob")
+
+        self.assertIn(
+            "Too many wrong codes. Try again in a few minutes.",
+            self.join(fresh, "ZZZZZZ"),
+        )
+
+    def test_right_codes_and_repeat_joins_do_not_count_toward_limit(self):
+        group = self.create()
+        bob, _ = self.as_user("bob@example.com", "Bob")
+
+        for _ in range(MAX_JOIN_FAILURES + 2):
+            self.join(bob, group["join_code"])
+
+        for _ in range(MAX_JOIN_FAILURES - 1):
+            self.join(bob, "ZZZZZZ")
+
+        self.assertIn("No group has that code.", self.join(bob, "ZZZZZZ"))
 
     def test_steps_page_unaffected_by_group_membership(self):
         self.log(self.alice_id, TODAY, 4321)

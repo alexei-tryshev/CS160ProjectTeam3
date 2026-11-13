@@ -1,6 +1,6 @@
 """Step-competition groups: create, join, leave, and the leaderboard."""
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 from flask import (
     Blueprint,
@@ -15,6 +15,7 @@ from flask import (
 )
 
 from blueprints.access import current_user_id, require_login
+from groups import JOIN_FAILURE_WINDOW, MAX_JOIN_FAILURES
 from summaries import PERIODS, leaderboard_rows, period_start
 from validation import validate_display_name, validate_group_name
 
@@ -36,6 +37,10 @@ NAME_SETUP_ENDPOINTS = {"groups.page", "groups.set_display_name"}
 
 def _repository():
     return current_app.extensions["repository"]
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _current_user():
@@ -195,15 +200,31 @@ def create():
 
 @groups_bp.post("/groups/join")
 def join():
+    now = _now()
+    user_id = current_user_id()
+
+    # Checked before looking at the code, so a correct guess made while
+    # the limit applies is refused like any other.
+    recent_failures = _repository().count_join_failures_since(
+        user_id,
+        now - JOIN_FAILURE_WINDOW,
+    )
+
+    if recent_failures >= MAX_JOIN_FAILURES:
+        flash("Too many wrong codes. Try again in a few minutes.", "error")
+
+        return redirect(url_for("groups.page"))
+
     group = _repository().get_group_by_code(request.form.get("code", ""))
 
     result = (
         "not_found"
         if group is None
-        else _repository().add_group_member(group["id"], current_user_id())
+        else _repository().add_group_member(group["id"], user_id)
     )
 
     if result == "not_found":
+        _repository().record_join_failure(user_id, now)
         flash("No group has that code.", "error")
 
         return redirect(url_for("groups.page"))

@@ -1,5 +1,6 @@
 from datetime import date, datetime
 import math
+import unicodedata
 from typing import Any, Dict, List, Tuple
 
 from groups import MAX_GROUP_MEMBERS, MAX_GROUP_NAME_LENGTH
@@ -12,6 +13,7 @@ MAX_BSON_INT = 2 ** 63 - 1
 ENTRIES_COLLECTION = "entries"
 GOALS_COLLECTION = "goals"
 GROUPS_COLLECTION = "groups"
+JOIN_FAILURES_COLLECTION = "join_failures"
 
 MAX_DISPLAY_NAME_LENGTH = 30
 
@@ -90,6 +92,21 @@ GROUP_INDEXES: List[Dict[str, Any]] = [
 ]
 
 
+JOIN_FAILURE_INDEXES: List[Dict[str, Any]] = [
+    {
+        "keys": [("user_id", 1), ("at", -1)],
+        "name": "join_failures_by_user_time",
+    },
+    {
+        # MongoDB deletes old attempts on its own; a day is far longer
+        # than the window the limit looks at.
+        "keys": [("at", 1)],
+        "name": "join_failures_expire",
+        "expire_after_seconds": 24 * 60 * 60,
+    },
+]
+
+
 GROUP_REQUIRED_FIELDS = (
     "name",
     "join_code",
@@ -117,6 +134,19 @@ GOAL_REQUIRED_FIELDS = (
     "water_goal_oz",
     "updated_at",
 )
+
+
+def has_visible_text(value: Any) -> bool:
+    """True when ``value`` has at least one character a person can see.
+
+    Spaces, zero-width and other formatting characters do not count, so
+    a name made only of them would show up blank.
+    """
+
+    return isinstance(value, str) and any(
+        not unicodedata.category(character).startswith(("C", "Z"))
+        for character in value
+    )
 
 
 def _valid_date(value: Any) -> bool:
@@ -338,8 +368,7 @@ def validate_user_document_shape(
         display_name = document["display_name"]
 
         if (
-            not isinstance(display_name, str)
-            or not display_name.strip()
+            not has_visible_text(display_name)
             or len(display_name.strip()) > MAX_DISPLAY_NAME_LENGTH
         ):
             errors.append(
@@ -405,8 +434,7 @@ def validate_group_document_shape(
     name = document.get("name")
 
     if (
-        not isinstance(name, str)
-        or not name.strip()
+        not has_visible_text(name)
         or len(name.strip()) > MAX_GROUP_NAME_LENGTH
     ):
         errors.append(

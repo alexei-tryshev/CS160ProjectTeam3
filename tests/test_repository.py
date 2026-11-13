@@ -94,7 +94,7 @@ class RepositoryContract:
         self.assertEqual(self.repo.get_user(user["id"])["email"], "a@example.com")
 
     def test_display_name_over_30_chars_or_blank_rejected(self):
-        for bad in ("x" * 31, "   ", 7):
+        for bad in ("x" * 31, "   ", 7, "\u200b", "\u200b\u2060 "):
             with self.subTest(display_name=bad):
                 with self.assertRaises(ValueError):
                     self.repo.create_user("b@example.com", "hash", display_name=bad)

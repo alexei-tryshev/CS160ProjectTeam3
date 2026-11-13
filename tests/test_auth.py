@@ -112,7 +112,7 @@ class AuthenticationTests(unittest.TestCase):
         return self.client.post("/auth/register", data=data)
 
     def test_register_requires_display_name(self):
-        for missing in (None, "", "   "):
+        for missing in (None, "", "   ", "\u200b\u200b", "\u200b \ufeff"):
             with self.subTest(display_name=missing):
                 response = self.register(display_name=missing)
 

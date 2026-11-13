@@ -2,6 +2,7 @@ from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
 from groups import MAX_GROUP_NAME_LENGTH
+from schema import has_visible_text
 
 
 def _text(raw: Dict[str, Any], name: str) -> str:
@@ -185,7 +186,7 @@ def validate_display_name(
 
     name = _text(raw, "display_name")
 
-    if not name:
+    if not has_visible_text(name):
         return name, ["Display name is required."]
 
     if len(name) > MAX_DISPLAY_NAME_LENGTH:
@@ -205,7 +206,7 @@ def validate_group_name(
 
     name = _text(raw, "name")
 
-    if not name:
+    if not has_visible_text(name):
         return name, ["Group name is required."]
 
     if len(name) > MAX_GROUP_NAME_LENGTH:

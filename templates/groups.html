@@ -13,7 +13,7 @@
         {% if groups|length > 1 %}
             <nav class="range-buttons group-switcher" aria-label="Your groups">
                 {% for group in groups %}
-                    <a href="{{ url_for('groups.page', group=group.id) }}"{% if group.id == selected.id %} aria-current="true" class="is-active"{% endif %}>{{ group.name }}</a>
+                    <a href="{{ url_for('groups.page', group=group.id, period=period) }}"{% if group.id == selected.id %} aria-current="true" class="is-active"{% endif %}>{{ group.name }}</a>
                 {% endfor %}
             </nav>
         {% endif %}
