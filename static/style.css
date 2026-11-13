@@ -542,3 +542,9 @@ td.actions form {
         font-size: 40px;
     }
 }
+
+.field-hint {
+    margin: -4px 0 12px;
+    color: var(--muted);
+    font-size: 0.875rem;
+}

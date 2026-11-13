@@ -74,16 +74,29 @@ def _entry_document(
     }
 
 
+def _normalize_display_name(display_name: Any) -> Any:
+    if isinstance(display_name, str):
+        return display_name.strip()
+
+    return display_name
+
+
 def _user_document(
     email: str,
     password_hash: str,
     created_at: Optional[str] = None,
+    display_name: Optional[str] = None,
 ) -> Dict[str, Any]:
-    return {
+    document = {
         "email": _normalize_email(email),
         "password_hash": password_hash,
         "created_at": created_at or _utc_now(),
     }
+
+    if display_name is not None:
+        document["display_name"] = _normalize_display_name(display_name)
+
+    return document
 
 
 def _goal_document(
@@ -145,11 +158,13 @@ def validate_entry_data(
 def validate_user_data(
     email: str,
     password_hash: str,
+    display_name: Optional[str] = None,
 ) -> List[str]:
 
     document = _user_document(
         email,
         password_hash,
+        display_name=display_name,
     )
 
     return validate_user_document_shape(document)
@@ -190,10 +205,12 @@ def _raise_entry_validation_error(
 def _raise_user_validation_error(
     email: str,
     password_hash: str,
+    display_name: Optional[str] = None,
 ) -> None:
     errors = validate_user_data(
         email,
         password_hash,
+        display_name,
     )
 
     if errors:
@@ -391,10 +408,12 @@ class InMemoryRepository:
         self,
         email: str,
         password_hash: str,
+        display_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         _raise_user_validation_error(
             email,
             password_hash,
+            display_name,
         )
 
         normalized_email = _normalize_email(email)
@@ -407,6 +426,7 @@ class InMemoryRepository:
         user = _user_document(
             email,
             password_hash,
+            display_name=display_name,
         )
         user["id"] = str(uuid4())
 
@@ -449,6 +469,7 @@ class InMemoryRepository:
         allowed_fields = {
             "email",
             "password_hash",
+            "display_name",
         }
 
         unknown_fields = set(updates) - allowed_fields
@@ -476,9 +497,15 @@ class InMemoryRepository:
                     "password_hash"
                 ]
 
+            if "display_name" in updates:
+                updated["display_name"] = _normalize_display_name(
+                    updates["display_name"]
+                )
+
             _raise_user_validation_error(
                 updated["email"],
                 updated["password_hash"],
+                updated.get("display_name"),
             )
 
             duplicate = self.get_user_by_email(
@@ -781,15 +808,18 @@ class MongoRepository:
         self,
         email: str,
         password_hash: str,
+        display_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         _raise_user_validation_error(
             email,
             password_hash,
+            display_name,
         )
 
         document = _user_document(
             email,
             password_hash,
+            display_name=display_name,
         )
 
         result = self.users_collection.insert_one(document)
@@ -843,6 +873,7 @@ class MongoRepository:
         allowed_fields = {
             "email",
             "password_hash",
+            "display_name",
         }
 
         unknown_fields = set(updates) - allowed_fields
@@ -878,9 +909,15 @@ class MongoRepository:
                 "password_hash"
             ]
 
+        if "display_name" in updates:
+            updated["display_name"] = _normalize_display_name(
+                updates["display_name"]
+            )
+
         _raise_user_validation_error(
             updated["email"],
             updated["password_hash"],
+            updated.get("display_name"),
         )
 
         changes = {

@@ -31,6 +31,25 @@
         class="entry-form"
         novalidate
     >
+        <label for="display_name">
+            Display name
+        </label>
+
+        <input
+            id="display_name"
+            name="display_name"
+            type="text"
+            value="{{ form.get('display_name', '') }}"
+            maxlength="30"
+            autocomplete="nickname"
+            required
+            autofocus
+        >
+
+        <p class="field-hint">
+            Shown to people in your groups instead of your email.
+        </p>
+
         <label for="email">
             Email
         </label>
@@ -42,7 +61,6 @@
             value="{{ form.get('email', '') }}"
             autocomplete="email"
             required
-            autofocus
         >
 
         <label for="password">

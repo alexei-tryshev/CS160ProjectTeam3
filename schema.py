@@ -10,6 +10,8 @@ MAX_BSON_INT = 2 ** 63 - 1
 ENTRIES_COLLECTION = "entries"
 GOALS_COLLECTION = "goals"
 
+MAX_DISPLAY_NAME_LENGTH = 30
+
 
 FEATURE_PAYLOAD_FIELDS: Dict[str, Tuple[str, ...]] = {
     "nutrition": (
@@ -306,6 +308,21 @@ def validate_user_document_shape(
         errors.append(
             "Store password_hash instead of a plain-text password."
         )
+
+    # Optional: accounts created before display names have none.
+    if "display_name" in document:
+        display_name = document["display_name"]
+
+        if (
+            not isinstance(display_name, str)
+            or not display_name.strip()
+            or len(display_name.strip()) > MAX_DISPLAY_NAME_LENGTH
+        ):
+            errors.append(
+                "The display_name field must be 1 to {} characters.".format(
+                    MAX_DISPLAY_NAME_LENGTH
+                )
+            )
 
     if not _valid_timestamp(document.get("created_at")):
         errors.append(

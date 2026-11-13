@@ -10,6 +10,7 @@ from flask import (
     url_for,
 )
 from blueprints.access import safe_next_path
+from validation import validate_display_name
 from werkzeug.security import (
     check_password_hash,
     generate_password_hash,
@@ -66,7 +67,7 @@ def _validate_registration_form(form):
         form.get("confirm_password", "")
     )
 
-    errors = []
+    display_name, errors = validate_display_name(form)
 
     if not email:
         errors.append("Email is required.")
@@ -85,7 +86,7 @@ def _validate_registration_form(form):
     if password != confirm_password:
         errors.append("Passwords do not match.")
 
-    return email, password, errors
+    return display_name, email, password, errors
 
 
 def _is_duplicate_key_error(error):
@@ -104,6 +105,7 @@ def _is_duplicate_key_error(error):
 )
 def register():
     form = {
+        "display_name": "",
         "email": "",
     }
 
@@ -113,12 +115,13 @@ def register():
     if request.method == "POST":
         submitted_form = request.form.to_dict()
 
-        email, password, errors = (
+        display_name, email, password, errors = (
             _validate_registration_form(
                 submitted_form
             )
         )
         form = {
+            "display_name": display_name,
             "email": email,
         }
 
@@ -142,6 +145,7 @@ def register():
                     repository.create_user(
                         email,
                         password_hash,
+                        display_name=display_name,
                     )
                 except ValueError as exc:
                     errors.append(str(exc))

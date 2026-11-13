@@ -4,8 +4,16 @@ from werkzeug.security import generate_password_hash
 TEST_PASSWORD = "Password123!"
 
 
-def log_in(client, repository, email="tester@example.com"):
-    """Create ``email`` if needed, log in through the real form, return its id."""
+def log_in(
+    client,
+    repository,
+    email="tester@example.com",
+    display_name="Tester",
+):
+    """Create ``email`` if needed, log in through the real form, return its id.
+
+    Pass ``display_name=None`` for an account from before display names.
+    """
 
     user = repository.get_user_by_email(email)
 
@@ -13,6 +21,7 @@ def log_in(client, repository, email="tester@example.com"):
         user = repository.create_user(
             email,
             generate_password_hash(TEST_PASSWORD),
+            display_name=display_name,
         )
 
     response = client.post(

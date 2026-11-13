@@ -37,6 +37,7 @@ def _decimal(
 MAX_WATER_AMOUNT_OZ = 350
 MAX_WATER_GOAL_OZ = 700
 MAX_STEPS = 100_000
+MAX_DISPLAY_NAME_LENGTH = 30
 
 
 def _whole_number(
@@ -173,3 +174,23 @@ def validate_goal(
         ]
 
     return goal, []
+
+
+def validate_display_name(
+    raw: Dict[str, Any],
+) -> Tuple[str, List[str]]:
+    """Return the trimmed display name and user-readable errors."""
+
+    name = _text(raw, "display_name")
+
+    if not name:
+        return name, ["Display name is required."]
+
+    if len(name) > MAX_DISPLAY_NAME_LENGTH:
+        return name, [
+            "Display name must be at most {} characters.".format(
+                MAX_DISPLAY_NAME_LENGTH
+            )
+        ]
+
+    return name, []

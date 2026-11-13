@@ -25,6 +25,7 @@ class AuthenticationTests(unittest.TestCase):
         response = self.client.post(
             "/auth/register",
             data={
+                "display_name": "Alex",
                 "email": "alex@example.com",
                 "password": "Password123!",
                 "confirm_password": "Password123!",
@@ -98,12 +99,69 @@ class AuthenticationTests(unittest.TestCase):
             user,
         )
 
+    def register(self, **overrides):
+        data = {
+            "display_name": "Alex",
+            "email": "new@example.com",
+            "password": "Password123!",
+            "confirm_password": "Password123!",
+        }
+        data.update(overrides)
+        data = {key: value for key, value in data.items() if value is not None}
+
+        return self.client.post("/auth/register", data=data)
+
+    def test_register_requires_display_name(self):
+        for missing in (None, "", "   "):
+            with self.subTest(display_name=missing):
+                response = self.register(display_name=missing)
+
+                self.assertEqual(response.status_code, 400)
+                self.assertIn(
+                    "Display name is required.",
+                    response.get_data(as_text=True),
+                )
+                self.assertIsNone(
+                    self.repository.get_user_by_email("new@example.com")
+                )
+
+    def test_register_saves_display_name(self):
+        response = self.register(display_name=" Joyce ")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            self.repository.get_user_by_email("new@example.com")["display_name"],
+            "Joyce",
+        )
+
+    def test_register_rejects_long_display_name(self):
+        response = self.register(display_name="x" * 31)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            "Display name must be at most 30 characters.",
+            response.get_data(as_text=True),
+        )
+        self.assertIsNone(self.repository.get_user_by_email("new@example.com"))
+        self.assertEqual(self.register(display_name="x" * 30).status_code, 302)
+
+    def test_register_form_keeps_display_name_after_error(self):
+        response = self.register(display_name="Joyce", confirm_password="nope")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            'name="display_name"',
+            response.get_data(as_text=True),
+        )
+        self.assertIn('value="Joyce"', response.get_data(as_text=True))
+
     def test_duplicate_registration_is_rejected(self):
         self.register_test_user()
 
         response = self.client.post(
             "/auth/register",
             data={
+                "display_name": "Alex",
                 "email": "ALEX@example.com",
                 "password": "Different123!",
                 "confirm_password": "Different123!",
