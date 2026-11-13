@@ -9,6 +9,7 @@ from flask import Flask
 
 from blueprints.api import api_bp
 from blueprints.auth import auth_bp
+from blueprints.groups import groups_bp
 from blueprints.main import main_bp
 from blueprints.steps import steps_bp
 from blueprints.tracking import tracking_bp
@@ -113,6 +114,7 @@ def create_app(test_config: Dict[str, Any] = None) -> Flask:
     # Register all Flask Blueprints.
     app.register_blueprint(main_bp)
     app.register_blueprint(steps_bp)
+    app.register_blueprint(groups_bp)
     app.register_blueprint(tracking_bp)
     app.register_blueprint(water_bp)
     app.register_blueprint(weight_bp)

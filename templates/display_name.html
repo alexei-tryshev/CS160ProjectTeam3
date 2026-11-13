@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_tracker_macros.html" import form_errors %}
+{% set active_page = "groups" %}
+{% block title %}Groups | Wellness Tracker{% endblock %}
+{% block content %}
+<header class="page-header">
+    <a class="back-link" href="{{ url_for('main.home') }}">← Back to dashboard</a>
+    <h1>Groups</h1>
+    <p class="subtitle">Compete with friends on daily, weekly, and monthly steps.</p>
+</header>
+
+{{ form_errors(errors) }}
+
+<section class="card card--narrow" aria-labelledby="name-heading">
+    <h2 id="name-heading">Choose a display name</h2>
+    <form method="post" action="{{ url_for('groups.set_display_name') }}" class="entry-form">
+        <label for="display_name">Display name</label>
+        <input id="display_name" name="display_name" type="text" value="{{ form.get('display_name', '') }}" maxlength="30" autocomplete="nickname" required autofocus>
+        <p class="field-hint">Shown to people in your groups instead of your email.</p>
+        <button class="btn btn-primary" type="submit">Save</button>
+    </form>
+</section>
+{% endblock %}
