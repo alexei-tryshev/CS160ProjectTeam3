@@ -1,4 +1,4 @@
-// Quick-add buttons fill in a form field; the user still presses Save.
+
 document.querySelectorAll("button[data-amount]").forEach(function (button) {
     button.addEventListener("click", function () {
         var input = button.form.elements[button.dataset.target];
@@ -11,7 +11,6 @@ document.querySelectorAll("button[data-amount]").forEach(function (button) {
 (function () {
     var dataElement = document.getElementById("chart-data");
     var canvas = document.getElementById("trend-chart");
-
     if (!dataElement || !canvas || !window.Chart) {
         return;
     }
@@ -22,9 +21,13 @@ document.querySelectorAll("button[data-amount]").forEach(function (button) {
     var muted = styles.getPropertyValue("--muted").trim();
     var grid = styles.getPropertyValue("--border").trim();
     var kind = dataElement.dataset.chart;
-    var isBar = kind === "water-bar" || kind === "steps-bar";
-    var barField = kind === "steps-bar" ? "total_steps" : "total_oz";
-    var barLabel = kind === "steps-bar" ? "Steps" : "Total (fl oz)";
+    var barCharts = {
+        "water-bar": { field: "total_oz", label: "Total (fl oz)" },
+        "steps-bar": { field: "total_steps", label: "Steps" },
+        "nutrition-bar": { field: "total_calories", label: "Calories (kcal)" }
+    };
+    var barConfig = barCharts[kind];
+    var isBar = Boolean(barConfig);
 
     var labels = points.map(function (point) {
         return new Date(point.date + "T00:00:00").toLocaleDateString(undefined, {
@@ -35,8 +38,8 @@ document.querySelectorAll("button[data-amount]").forEach(function (button) {
 
     var dataset = isBar
         ? {
-            label: barLabel,
-            data: points.map(function (point) { return point[barField]; }),
+            label: barConfig.label,
+            data: points.map(function (point) { return point[barConfig.field]; }),
             backgroundColor: accent,
             borderRadius: 4
         }

@@ -11,6 +11,7 @@ from blueprints.api import api_bp
 from blueprints.auth import auth_bp
 from blueprints.groups import groups_bp
 from blueprints.main import main_bp
+from blueprints.nutrition import nutrition_bp
 from blueprints.steps import steps_bp
 from blueprints.tracking import tracking_bp
 from blueprints.water import water_bp
@@ -18,12 +19,10 @@ from blueprints.weight import weight_bp
 from repository import InMemoryRepository, MongoRepository
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-
 load_dotenv(PROJECT_ROOT / ".env")
 
 
 def _as_bool(value: Any) -> bool:
-
     return str(value).strip().lower() in {
         "1",
         "true",
@@ -33,9 +32,7 @@ def _as_bool(value: Any) -> bool:
 
 
 def _make_repository(app: Flask):
-
     supplied_repository = app.config.get("REPOSITORY")
-
     if supplied_repository is not None:
         return supplied_repository
 
@@ -50,28 +47,22 @@ def _make_repository(app: Flask):
                 "MONGO_SERVER_SELECTION_TIMEOUT_MS"
             ],
         )
-
         repository.ping()
         return repository
-
     except Exception as exc:
         # MongoDB is an external dependency during local setup.
         if not app.config.get("ALLOW_MEMORY_FALLBACK", True):
             raise
-
         app.logger.warning(
             "MongoDB is unavailable; using an in-memory "
             "repository for this run: %s",
             exc,
         )
-
         return InMemoryRepository()
 
 
 def create_app(test_config: Dict[str, Any] = None) -> Flask:
-
     app = Flask(__name__)
-
     app.config.from_mapping(
         SECRET_KEY=os.environ.get(
             "SECRET_KEY",
@@ -105,7 +96,6 @@ def create_app(test_config: Dict[str, Any] = None) -> Flask:
         app.config.update(test_config)
 
     repository = _make_repository(app)
-
     app.extensions["repository"] = repository
     app.config["REPOSITORY_BACKEND"] = type(
         repository
@@ -113,6 +103,7 @@ def create_app(test_config: Dict[str, Any] = None) -> Flask:
 
     # Register all Flask Blueprints.
     app.register_blueprint(main_bp)
+    app.register_blueprint(nutrition_bp)
     app.register_blueprint(steps_bp)
     app.register_blueprint(groups_bp)
     app.register_blueprint(tracking_bp)
@@ -125,7 +116,6 @@ def create_app(test_config: Dict[str, Any] = None) -> Flask:
 
 
 app = create_app()
-
 
 if __name__ == "__main__":
     app.run(debug=True)

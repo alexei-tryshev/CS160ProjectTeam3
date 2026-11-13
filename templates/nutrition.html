@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% from "_tracker_macros.html" import entry_actions, form_buttons, form_errors %}
+{% set active_page = "nutrition" %}
+
+{% block title %}Nutrition tracking | Wellness Tracker{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <a class="back-link" href="{{ url_for('main.home') }}">&larr; Back to dashboard</a>
+    <h1>Nutrition tracking</h1>
+    <p class="subtitle">Record the food you eat and track your daily calorie intake.</p>
+</header>
+
+{{ form_errors(errors) }}
+
+<div class="card-grid">
+    <section class="card" aria-labelledby="log-heading">
+        <h2 id="log-heading">{% if editing %}Edit entry{% else %}Log food{% endif %}</h2>
+        <form method="post" action="{{ url_for('nutrition.page') }}" class="entry-form">
+            {% if editing %}
+                <input type="hidden" name="entry_id" value="{{ form.entry_id }}">
+            {% endif %}
+
+            <label for="food">Food</label>
+            <input id="food" name="food" type="text" value="{{ form.get('food', '') }}" placeholder="e.g. Oatmeal" required>
+
+            <div class="field-row">
+                <div class="field">
+                    <label for="calories">Calories</label>
+                    <input id="calories" name="calories" type="number" value="{{ form.get('calories', '') }}" min="0" step="0.1" placeholder="e.g. 300" required>
+                </div>
+                <div class="field">
+                    <label for="protein_g">Protein (g)</label>
+                    <input id="protein_g" name="protein_g" type="number" value="{{ form.get('protein_g', '') }}" min="0" step="0.1" placeholder="e.g. 10" required>
+                </div>
+            </div>
+
+            <div class="field-row">
+                <div class="field">
+                    <label for="carbs_g">Carbohydrates (g)</label>
+                    <input id="carbs_g" name="carbs_g" type="number" value="{{ form.get('carbs_g', '') }}" min="0" step="0.1" placeholder="e.g. 50" required>
+                </div>
+                <div class="field">
+                    <label for="fat_g">Fat (g)</label>
+                    <input id="fat_g" name="fat_g" type="number" value="{{ form.get('fat_g', '') }}" min="0" step="0.1" placeholder="e.g. 5" required>
+                </div>
+            </div>
+
+            <label for="date">Date</label>
+            <input id="date" name="date" type="date" value="{{ form.get('date', '') }}" required>
+
+            {{ form_buttons(editing, url_for('nutrition.page')) }}
+        </form>
+    </section>
+
+    <section class="card" aria-labelledby="progress-heading">
+        <div class="card-heading">
+            <h2 id="progress-heading">Progress</h2>
+            <nav class="range-buttons" aria-label="Chart period">
+                {% for key, label in range_labels.items() %}
+                    <a{% if key == range_key %} class="is-active"{% endif %} href="{{ url_for('nutrition.page', range=key) }}">{{ label }}</a>
+                {% endfor %}
+            </nav>
+        </div>
+
+        <div class="tiles">
+            <div class="tile">
+                <p class="tile-label">Today</p>
+                <p class="tile-value">{{ today_total|nutrition_number }} kcal</p>
+            </div>
+            <div class="tile">
+                <p class="tile-label">This week</p>
+                <p class="tile-value">{{ week_total|nutrition_number }} kcal</p>
+            </div>
+        </div>
+
+        <div class="chart-box">
+            <canvas id="trend-chart" role="img" aria-label="Bar chart of daily calorie totals for the last {{ range_days }} days"></canvas>
+        </div>
+        <script type="application/json" id="chart-data" data-chart="nutrition-bar">{{ chart|tojson }}</script>
+    </section>
+</div>
+
+<section class="card" aria-labelledby="entries-heading">
+    <h2 id="entries-heading">Recent entries</h2>
+    {% if entries %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Food</th>
+                        <th scope="col">Calories</th>
+                        <th scope="col">Protein (g)</th>
+                        <th scope="col">Carbohydrates (g)</th>
+                        <th scope="col">Fat (g)</th>
+                        <th scope="col" class="actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                        <tr>
+                            <td>{{ entry.date }}</td>
+                            <td>{{ entry.data.food }}</td>
+                            <td>{{ entry.data.calories|nutrition_number }}</td>
+                            <td>{{ entry.data.protein_g|nutrition_number }}</td>
+                            <td>{{ entry.data.carbs_g|nutrition_number }}</td>
+                            <td>{{ entry.data.fat_g|nutrition_number }}</td>
+                            <td class="actions">
+                                {{ entry_actions(url_for('nutrition.page', edit=entry.id), url_for('nutrition.delete', entry_id=entry.id)) }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty-state">No entries yet. Add the first one above.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script src="{{ url_for('static', filename='tracker.js') }}" defer></script>
+{% endblock %}
