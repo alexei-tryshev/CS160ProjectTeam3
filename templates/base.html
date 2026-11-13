@@ -53,15 +53,17 @@
                 (
                     "steps",
                     "Steps",
-                    url_for(
-                        "tracking.feature_page",
-                        feature="steps"
-                    )
+                    url_for("steps.page")
                 ),
                 (
                     "weight",
                     "Weight",
                     url_for("weight.page")
+                ),
+                (
+                    "groups",
+                    "Groups",
+                    url_for("groups.page")
                 )
             ] %}
                 <a

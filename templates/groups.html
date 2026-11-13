@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set active_page = "groups" %}
+{% block title %}Groups | Wellness Tracker{% endblock %}
+{% block content %}
+<header class="page-header">
+    <a class="back-link" href="{{ url_for('main.home') }}">← Back to dashboard</a>
+    <h1>Groups</h1>
+    <p class="subtitle">Compete with friends on daily, weekly, and monthly steps.</p>
+</header>
+
+{% if selected %}
+    <section class="card" aria-labelledby="group-heading">
+        {% if groups|length > 1 %}
+            <nav class="range-buttons group-switcher" aria-label="Your groups">
+                {% for group in groups %}
+                    <a href="{{ url_for('groups.page', group=group.id, period=period) }}"{% if group.id == selected.id %} aria-current="true" class="is-active"{% endif %}>{{ group.name }}</a>
+                {% endfor %}
+            </nav>
+        {% endif %}
+
+        <div class="card-heading">
+            <div>
+                <h2 id="group-heading">{{ selected.name }}</h2>
+                <p class="group-meta">Join code <strong class="join-code">{{ selected.join_code }}</strong> · share it with friends so they can join</p>
+            </div>
+            <form method="post" action="{{ url_for('groups.leave', group_id=selected.id) }}" onsubmit="return confirm('Leave this group?')">
+                <button class="btn-link" type="submit">Leave group</button>
+            </form>
+        </div>
+
+        <nav class="range-buttons" aria-label="Leaderboard period">
+            {% for key, label in period_labels.items() %}
+                <a href="{{ url_for('groups.page', group=selected.id, period=key) }}"{% if key == period %} aria-current="true" class="is-active"{% endif %}>{{ label }}</a>
+            {% endfor %}
+        </nav>
+
+        <div class="table-wrap">
+            <table class="leaderboard">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Steps</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr{% if row.is_you %} class="is-you"{% endif %}>
+                            <td>{{ row.rank }}</td>
+                            <td>{% if row.is_you %}You ({{ row.name }}){% else %}{{ row.name }}{% endif %}</td>
+                            <td>{{ "{:,}".format(row.steps) }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% else %}
+    <p class="intro">Create a group and share its code, or join a friend's group with theirs.</p>
+{% endif %}
+
+<div class="card-grid">
+    <section class="card" aria-labelledby="create-heading">
+        <h2 id="create-heading">Create a group</h2>
+        <form method="post" action="{{ url_for('groups.create') }}" class="entry-form">
+            <label for="group-name">Group name</label>
+            <input id="group-name" name="name" type="text" maxlength="40" placeholder="e.g. Roommates" required>
+            <button class="btn btn-primary" type="submit">Create group</button>
+        </form>
+    </section>
+
+    <section class="card" aria-labelledby="join-heading">
+        <h2 id="join-heading">Join with a code</h2>
+        <form method="post" action="{{ url_for('groups.join') }}" class="entry-form">
+            <label for="join-code">Join code</label>
+            <input id="join-code" name="code" type="text" maxlength="12" placeholder="e.g. K7QM2X" autocomplete="off" autocapitalize="characters" required>
+            <button class="btn btn-primary" type="submit">Join group</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

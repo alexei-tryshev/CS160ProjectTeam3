@@ -1,6 +1,9 @@
 from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
+from groups import MAX_GROUP_NAME_LENGTH
+from schema import has_visible_text
+
 
 def _text(raw: Dict[str, Any], name: str) -> str:
     value = raw.get(name, "")
@@ -36,6 +39,8 @@ def _decimal(
 
 MAX_WATER_AMOUNT_OZ = 350
 MAX_WATER_GOAL_OZ = 700
+MAX_STEPS = 100_000
+MAX_DISPLAY_NAME_LENGTH = 30
 
 
 def _whole_number(
@@ -128,7 +133,11 @@ def validate_entry(
 
     elif feature == "steps":
         payload["steps"] = _whole_number(
-            raw, "steps", "Steps", errors
+            raw,
+            "steps",
+            "Steps",
+            errors,
+            maximum=MAX_STEPS,
         )
 
     elif feature == "weight":
@@ -168,3 +177,43 @@ def validate_goal(
         ]
 
     return goal, []
+
+
+def validate_display_name(
+    raw: Dict[str, Any],
+) -> Tuple[str, List[str]]:
+    """Return the trimmed display name and user-readable errors."""
+
+    name = _text(raw, "display_name")
+
+    if not has_visible_text(name):
+        return name, ["Display name is required."]
+
+    if len(name) > MAX_DISPLAY_NAME_LENGTH:
+        return name, [
+            "Display name must be at most {} characters.".format(
+                MAX_DISPLAY_NAME_LENGTH
+            )
+        ]
+
+    return name, []
+
+
+def validate_group_name(
+    raw: Dict[str, Any],
+) -> Tuple[str, List[str]]:
+    """Return the trimmed group name and user-readable errors."""
+
+    name = _text(raw, "name")
+
+    if not has_visible_text(name):
+        return name, ["Group name is required."]
+
+    if len(name) > MAX_GROUP_NAME_LENGTH:
+        return name, [
+            "Group name must be at most {} characters.".format(
+                MAX_GROUP_NAME_LENGTH
+            )
+        ]
+
+    return name, []

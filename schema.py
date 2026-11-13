@@ -1,6 +1,9 @@
 from datetime import date, datetime
 import math
+import unicodedata
 from typing import Any, Dict, List, Tuple
+
+from groups import MAX_GROUP_MEMBERS, MAX_GROUP_NAME_LENGTH
 
 
 USERS_COLLECTION = "users"
@@ -9,6 +12,10 @@ USERS_COLLECTION = "users"
 MAX_BSON_INT = 2 ** 63 - 1
 ENTRIES_COLLECTION = "entries"
 GOALS_COLLECTION = "goals"
+GROUPS_COLLECTION = "groups"
+JOIN_FAILURES_COLLECTION = "join_failures"
+
+MAX_DISPLAY_NAME_LENGTH = 30
 
 
 FEATURE_PAYLOAD_FIELDS: Dict[str, Tuple[str, ...]] = {
@@ -72,6 +79,42 @@ GOAL_INDEXES: List[Dict[str, Any]] = [
 ]
 
 
+GROUP_INDEXES: List[Dict[str, Any]] = [
+    {
+        "keys": [("join_code", 1)],
+        "name": "groups_by_join_code",
+        "unique": True,
+    },
+    {
+        "keys": [("member_ids", 1)],
+        "name": "groups_by_member",
+    },
+]
+
+
+JOIN_FAILURE_INDEXES: List[Dict[str, Any]] = [
+    {
+        "keys": [("user_id", 1), ("at", -1)],
+        "name": "join_failures_by_user_time",
+    },
+    {
+        # MongoDB deletes old attempts on its own; a day is far longer
+        # than the window the limit looks at.
+        "keys": [("at", 1)],
+        "name": "join_failures_expire",
+        "expire_after_seconds": 24 * 60 * 60,
+    },
+]
+
+
+GROUP_REQUIRED_FIELDS = (
+    "name",
+    "join_code",
+    "member_ids",
+    "created_by",
+    "created_at",
+)
+
 ENTRY_REQUIRED_FIELDS = (
     "feature",
     "user_id",
@@ -91,6 +134,19 @@ GOAL_REQUIRED_FIELDS = (
     "water_goal_oz",
     "updated_at",
 )
+
+
+def has_visible_text(value: Any) -> bool:
+    """True when ``value`` has at least one character a person can see.
+
+    Spaces, zero-width and other formatting characters do not count, so
+    a name made only of them would show up blank.
+    """
+
+    return isinstance(value, str) and any(
+        not unicodedata.category(character).startswith(("C", "Z"))
+        for character in value
+    )
 
 
 def _valid_date(value: Any) -> bool:
@@ -307,6 +363,20 @@ def validate_user_document_shape(
             "Store password_hash instead of a plain-text password."
         )
 
+    # Optional: accounts created before display names have none.
+    if "display_name" in document:
+        display_name = document["display_name"]
+
+        if (
+            not has_visible_text(display_name)
+            or len(display_name.strip()) > MAX_DISPLAY_NAME_LENGTH
+        ):
+            errors.append(
+                "The display_name field must be 1 to {} characters.".format(
+                    MAX_DISPLAY_NAME_LENGTH
+                )
+            )
+
     if not _valid_timestamp(document.get("created_at")):
         errors.append(
             "The user created_at field must be an ISO-8601 timestamp."
@@ -344,6 +414,69 @@ def validate_goal_document_shape(
     if not _valid_timestamp(document.get("updated_at")):
         errors.append(
             "The goal updated_at field must be an ISO-8601 timestamp."
+        )
+
+    return errors
+
+
+def validate_group_document_shape(
+    document: Dict[str, Any],
+) -> List[str]:
+
+    errors: List[str] = []
+
+    for field in GROUP_REQUIRED_FIELDS:
+        if field not in document:
+            errors.append(
+                "Missing group field: {}.".format(field)
+            )
+
+    name = document.get("name")
+
+    if (
+        not has_visible_text(name)
+        or len(name.strip()) > MAX_GROUP_NAME_LENGTH
+    ):
+        errors.append(
+            "The group name must be 1 to {} characters.".format(
+                MAX_GROUP_NAME_LENGTH
+            )
+        )
+
+    join_code = document.get("join_code")
+
+    if not isinstance(join_code, str) or not join_code.strip():
+        errors.append(
+            "The join_code field must be non-empty text."
+        )
+
+    member_ids = document.get("member_ids")
+
+    if (
+        not isinstance(member_ids, list)
+        or not member_ids
+        or len(member_ids) > MAX_GROUP_MEMBERS
+        or any(
+            not isinstance(member_id, str) or not member_id.strip()
+            for member_id in member_ids
+        )
+    ):
+        errors.append(
+            "The member_ids field must list 1 to {} user ids.".format(
+                MAX_GROUP_MEMBERS
+            )
+        )
+
+    created_by = document.get("created_by")
+
+    if not isinstance(created_by, str) or not created_by.strip():
+        errors.append(
+            "The created_by field must be a non-empty string."
+        )
+
+    if not _valid_timestamp(document.get("created_at")):
+        errors.append(
+            "The group created_at field must be an ISO-8601 timestamp."
         )
 
     return errors

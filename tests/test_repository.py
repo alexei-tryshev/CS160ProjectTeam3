@@ -72,6 +72,43 @@ class RepositoryContract:
         self.assertIsNone(self.repo.get_water_goal("u1"))
 
 
+    def test_create_user_stores_trimmed_display_name(self):
+        user = self.repo.create_user("a@example.com", "hash", display_name="  Joyce ")
+
+        self.assertEqual(user["display_name"], "Joyce")
+        self.assertEqual(self.repo.get_user(user["id"])["display_name"], "Joyce")
+
+    def test_create_user_without_display_name_has_no_field(self):
+        user = self.repo.create_user("a@example.com", "hash")
+
+        self.assertNotIn("display_name", user)
+        self.assertNotIn("display_name", self.repo.get_user(user["id"]))
+
+    def test_update_user_sets_display_name(self):
+        user = self.repo.create_user("a@example.com", "hash")
+
+        updated = self.repo.update_user(user["id"], {"display_name": " Joyce "})
+
+        self.assertEqual(updated["display_name"], "Joyce")
+        self.assertEqual(self.repo.get_user(user["id"])["display_name"], "Joyce")
+        self.assertEqual(self.repo.get_user(user["id"])["email"], "a@example.com")
+
+    def test_display_name_over_30_chars_or_blank_rejected(self):
+        for bad in ("x" * 31, "   ", 7, "\u200b", "\u200b\u2060 "):
+            with self.subTest(display_name=bad):
+                with self.assertRaises(ValueError):
+                    self.repo.create_user("b@example.com", "hash", display_name=bad)
+
+        self.assertIsNone(self.repo.get_user_by_email("b@example.com"))
+
+        user = self.repo.create_user("a@example.com", "hash", display_name="Ok")
+
+        with self.assertRaises(ValueError):
+            self.repo.update_user(user["id"], {"display_name": "x" * 31})
+
+        self.assertEqual(self.repo.get_user(user["id"])["display_name"], "Ok")
+
+
 class InMemoryRepositoryTests(RepositoryContract, unittest.TestCase):
 
     def make_repository(self):

@@ -104,6 +104,35 @@ class MongoVerticalSliceTestCase(unittest.TestCase):
 
         self.assertEqual(self.repo.collection.count_documents({"feature": "weight"}), 1)
 
+    def test_steps_slice_round_trip(self):
+        self.client.post("/steps", data={"date": TODAY, "steps": "6100"})
+
+        doc = self.repo.collection.find_one({"feature": "steps", "user_id": self.user_id})
+
+        self.assertEqual(doc["data"], {"date": TODAY, "steps": 6100})
+        self.assertIn("<td>6,100</td>", self.client.get("/steps").get_data(as_text=True))
+
+        entry_id = str(doc["_id"])
+
+        self.client.post(
+            "/steps",
+            data={"entry_id": entry_id, "date": TODAY, "steps": "6200"},
+        )
+
+        self.assertEqual(
+            self.repo.collection.find_one({"_id": doc["_id"]})["data"]["steps"],
+            6200,
+        )
+
+        self.client.post(f"/steps/entries/{entry_id}/delete")
+
+        self.assertEqual(
+            self.repo.collection.count_documents(
+                {"feature": "steps", "user_id": self.user_id}
+            ),
+            0,
+        )
+
     def test_api_reads_back_what_the_form_stored(self):
         self.client.post("/water", data={"date": TODAY, "amount_oz": "12"})
 

@@ -542,3 +542,59 @@ td.actions form {
         font-size: 40px;
     }
 }
+
+.field-hint {
+    margin: -4px 0 12px;
+    color: var(--muted);
+    font-size: 0.875rem;
+}
+
+/* Groups */
+
+.card--narrow {
+    max-width: 480px;
+}
+
+.card + .card-grid {
+    margin-top: 24px;
+}
+
+.group-switcher {
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.group-meta {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.join-code {
+    color: var(--text);
+    font-family: "Courier New", monospace;
+    letter-spacing: 0.08em;
+}
+
+.leaderboard {
+    margin-top: 16px;
+}
+
+.leaderboard td:first-child,
+.leaderboard th:first-child {
+    width: 48px;
+}
+
+.leaderboard td:last-child,
+.leaderboard th:last-child {
+    text-align: right;
+}
+
+.leaderboard tr.is-you td {
+    background: var(--track);
+    font-weight: bold;
+}
+
+.leaderboard td {
+    overflow-wrap: anywhere;
+}

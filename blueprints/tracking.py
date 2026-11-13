@@ -33,6 +33,10 @@ def _repository():
     methods=["GET", "POST"],
 )
 def feature_page(feature: str):
+    if feature == "fitness":
+        # The old "fitness" address now lives on the dedicated Steps page.
+        return redirect(url_for("steps.page"))
+
     feature = normalize_feature(feature)
 
     if feature not in FEATURES:
