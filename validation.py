@@ -1,6 +1,8 @@
 from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
+from groups import MAX_GROUP_NAME_LENGTH
+
 
 def _text(raw: Dict[str, Any], name: str) -> str:
     value = raw.get(name, "")
@@ -190,6 +192,26 @@ def validate_display_name(
         return name, [
             "Display name must be at most {} characters.".format(
                 MAX_DISPLAY_NAME_LENGTH
+            )
+        ]
+
+    return name, []
+
+
+def validate_group_name(
+    raw: Dict[str, Any],
+) -> Tuple[str, List[str]]:
+    """Return the trimmed group name and user-readable errors."""
+
+    name = _text(raw, "name")
+
+    if not name:
+        return name, ["Group name is required."]
+
+    if len(name) > MAX_GROUP_NAME_LENGTH:
+        return name, [
+            "Group name must be at most {} characters.".format(
+                MAX_GROUP_NAME_LENGTH
             )
         ]
 

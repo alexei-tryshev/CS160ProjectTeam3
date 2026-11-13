@@ -2,6 +2,8 @@ from datetime import date, datetime
 import math
 from typing import Any, Dict, List, Tuple
 
+from groups import MAX_GROUP_MEMBERS, MAX_GROUP_NAME_LENGTH
+
 
 USERS_COLLECTION = "users"
 
@@ -9,6 +11,7 @@ USERS_COLLECTION = "users"
 MAX_BSON_INT = 2 ** 63 - 1
 ENTRIES_COLLECTION = "entries"
 GOALS_COLLECTION = "goals"
+GROUPS_COLLECTION = "groups"
 
 MAX_DISPLAY_NAME_LENGTH = 30
 
@@ -73,6 +76,27 @@ GOAL_INDEXES: List[Dict[str, Any]] = [
     },
 ]
 
+
+GROUP_INDEXES: List[Dict[str, Any]] = [
+    {
+        "keys": [("join_code", 1)],
+        "name": "groups_by_join_code",
+        "unique": True,
+    },
+    {
+        "keys": [("member_ids", 1)],
+        "name": "groups_by_member",
+    },
+]
+
+
+GROUP_REQUIRED_FIELDS = (
+    "name",
+    "join_code",
+    "member_ids",
+    "created_by",
+    "created_at",
+)
 
 ENTRY_REQUIRED_FIELDS = (
     "feature",
@@ -361,6 +385,70 @@ def validate_goal_document_shape(
     if not _valid_timestamp(document.get("updated_at")):
         errors.append(
             "The goal updated_at field must be an ISO-8601 timestamp."
+        )
+
+    return errors
+
+
+def validate_group_document_shape(
+    document: Dict[str, Any],
+) -> List[str]:
+
+    errors: List[str] = []
+
+    for field in GROUP_REQUIRED_FIELDS:
+        if field not in document:
+            errors.append(
+                "Missing group field: {}.".format(field)
+            )
+
+    name = document.get("name")
+
+    if (
+        not isinstance(name, str)
+        or not name.strip()
+        or len(name.strip()) > MAX_GROUP_NAME_LENGTH
+    ):
+        errors.append(
+            "The group name must be 1 to {} characters.".format(
+                MAX_GROUP_NAME_LENGTH
+            )
+        )
+
+    join_code = document.get("join_code")
+
+    if not isinstance(join_code, str) or not join_code.strip():
+        errors.append(
+            "The join_code field must be non-empty text."
+        )
+
+    member_ids = document.get("member_ids")
+
+    if (
+        not isinstance(member_ids, list)
+        or not member_ids
+        or len(member_ids) > MAX_GROUP_MEMBERS
+        or any(
+            not isinstance(member_id, str) or not member_id.strip()
+            for member_id in member_ids
+        )
+    ):
+        errors.append(
+            "The member_ids field must list 1 to {} user ids.".format(
+                MAX_GROUP_MEMBERS
+            )
+        )
+
+    created_by = document.get("created_by")
+
+    if not isinstance(created_by, str) or not created_by.strip():
+        errors.append(
+            "The created_by field must be a non-empty string."
+        )
+
+    if not _valid_timestamp(document.get("created_at")):
+        errors.append(
+            "The group created_at field must be an ISO-8601 timestamp."
         )
 
     return errors

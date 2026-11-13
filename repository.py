@@ -3,17 +3,28 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from groups import (
+    MAX_GROUP_MEMBERS,
+    generate_join_code,
+    normalize_join_code,
+)
 from schema import (
     ENTRIES_COLLECTION,
     ENTRY_INDEXES,
     GOAL_INDEXES,
     GOALS_COLLECTION,
+    GROUP_INDEXES,
+    GROUPS_COLLECTION,
     USER_INDEXES,
     USERS_COLLECTION,
     validate_entry_document_shape,
     validate_goal_document_shape,
+    validate_group_document_shape,
     validate_user_document_shape,
 )
+
+# How many join codes to try before giving up on creating a group.
+JOIN_CODE_ATTEMPTS = 10
 
 
 def _utc_now() -> str:
@@ -95,6 +106,33 @@ def _user_document(
 
     if display_name is not None:
         document["display_name"] = _normalize_display_name(display_name)
+
+    return document
+
+
+def _group_document(
+    name: Any,
+    join_code: str,
+    creator_id: str,
+) -> Dict[str, Any]:
+    """Build a validated group document or raise ValueError."""
+
+    document = {
+        "name": name.strip() if isinstance(name, str) else name,
+        "join_code": join_code,
+        "member_ids": [creator_id],
+        "created_by": creator_id,
+        "created_at": _utc_now(),
+    }
+
+    errors = validate_group_document_shape(document)
+
+    if errors:
+        raise ValueError(
+            "Invalid group data: {}".format(
+                " ".join(errors)
+            )
+        )
 
     return document
 
@@ -227,6 +265,7 @@ class InMemoryRepository:
         self._entries: List[Dict[str, Any]] = []
         self._users: List[Dict[str, Any]] = []
         self._goals: Dict[str, Dict[str, Any]] = {}
+        self._groups: List[Dict[str, Any]] = []
 
     def create_entry(
         self,
@@ -526,6 +565,143 @@ class InMemoryRepository:
 
         return None
 
+    def create_group(
+        self,
+        name: str,
+        creator_id: str,
+        code_factory=generate_join_code,
+    ) -> Dict[str, Any]:
+        _group_document(name, "pending", creator_id)
+
+        for _ in range(JOIN_CODE_ATTEMPTS):
+            join_code = normalize_join_code(code_factory())
+
+            if self.get_group_by_code(join_code) is not None:
+                continue
+
+            group = _group_document(name, join_code, creator_id)
+            group["id"] = str(uuid4())
+
+            self._groups.append(deepcopy(group))
+
+            return deepcopy(group)
+
+        raise RuntimeError(
+            "Could not generate an unused join code."
+        )
+
+    def get_group(
+        self,
+        group_id: str,
+    ) -> Optional[Dict[str, Any]]:
+        for group in self._groups:
+            if group["id"] == str(group_id):
+                return deepcopy(group)
+
+        return None
+
+    def get_group_by_code(
+        self,
+        code: str,
+    ) -> Optional[Dict[str, Any]]:
+        join_code = normalize_join_code(code)
+
+        for group in self._groups:
+            if group["join_code"] == join_code:
+                return deepcopy(group)
+
+        return None
+
+    def list_groups_for_user(
+        self,
+        user_id: str,
+    ) -> List[Dict[str, Any]]:
+        groups = [
+            group
+            for group in self._groups
+            if user_id in group["member_ids"]
+        ]
+
+        groups.sort(key=lambda group: group["created_at"])
+
+        return deepcopy(groups)
+
+    def add_group_member(
+        self,
+        group_id: str,
+        user_id: str,
+    ) -> str:
+        for group in self._groups:
+            if group["id"] != str(group_id):
+                continue
+
+            if user_id in group["member_ids"]:
+                return "already_member"
+
+            if len(group["member_ids"]) >= MAX_GROUP_MEMBERS:
+                return "full"
+
+            group["member_ids"].append(user_id)
+
+            return "joined"
+
+        return "not_found"
+
+    def remove_group_member(
+        self,
+        group_id: str,
+        user_id: str,
+    ) -> bool:
+        for index, group in enumerate(self._groups):
+            if group["id"] != str(group_id):
+                continue
+
+            if user_id not in group["member_ids"]:
+                return False
+
+            group["member_ids"].remove(user_id)
+
+            # A group nobody belongs to can never be seen again.
+            if not group["member_ids"]:
+                del self._groups[index]
+
+            return True
+
+        return False
+
+    def list_users(
+        self,
+        user_ids: List[str],
+    ) -> List[Dict[str, Any]]:
+        wanted = {str(user_id) for user_id in user_ids}
+
+        return [
+            deepcopy(user)
+            for user in self._users
+            if user["id"] in wanted
+        ]
+
+    def list_entries_for_users_in_range(
+        self,
+        feature: str,
+        user_ids: List[str],
+        start_date: str,
+        end_date: str,
+    ) -> List[Dict[str, Any]]:
+        wanted = set(user_ids)
+
+        return [
+            deepcopy(entry)
+            for entry in self._entries
+            if entry["feature"] == feature
+            and entry["user_id"] in wanted
+            and _in_date_range(
+                entry["date"],
+                start_date,
+                end_date,
+            )
+        ]
+
 
 class MongoRepository:
 
@@ -556,6 +732,10 @@ class MongoRepository:
             GOALS_COLLECTION
         ]
 
+        self.groups_collection = self.database[
+            GROUPS_COLLECTION
+        ]
+
     def ping(self) -> None:
         self.client.admin.command("ping")
         self.ensure_indexes()
@@ -576,6 +756,13 @@ class MongoRepository:
 
         for index in GOAL_INDEXES:
             self.goals_collection.create_index(
+                index["keys"],
+                name=index["name"],
+                unique=index.get("unique", False),
+            )
+
+        for index in GROUP_INDEXES:
+            self.groups_collection.create_index(
                 index["keys"],
                 name=index["name"],
                 unique=index.get("unique", False),
@@ -935,3 +1122,201 @@ class MongoRepository:
         )
 
         return _serialize_document(updated)
+
+    def create_group(
+        self,
+        name: str,
+        creator_id: str,
+        code_factory=generate_join_code,
+    ) -> Dict[str, Any]:
+        from pymongo.errors import DuplicateKeyError
+
+        _group_document(name, "pending", creator_id)
+
+        for _ in range(JOIN_CODE_ATTEMPTS):
+            document = _group_document(
+                name,
+                normalize_join_code(code_factory()),
+                creator_id,
+            )
+
+            try:
+                # The unique join_code index rejects a code already in use.
+                result = self.groups_collection.insert_one(document)
+            except DuplicateKeyError:
+                continue
+
+            document["_id"] = result.inserted_id
+
+            return _serialize_document(document)
+
+        raise RuntimeError(
+            "Could not generate an unused join code."
+        )
+
+    def get_group(
+        self,
+        group_id: str,
+    ) -> Optional[Dict[str, Any]]:
+        object_id = _to_object_id(group_id)
+
+        if object_id is None:
+            return None
+
+        document = self.groups_collection.find_one(
+            {"_id": object_id}
+        )
+
+        if document is None:
+            return None
+
+        return _serialize_document(document)
+
+    def get_group_by_code(
+        self,
+        code: str,
+    ) -> Optional[Dict[str, Any]]:
+        document = self.groups_collection.find_one(
+            {"join_code": normalize_join_code(code)}
+        )
+
+        if document is None:
+            return None
+
+        return _serialize_document(document)
+
+    def list_groups_for_user(
+        self,
+        user_id: str,
+    ) -> List[Dict[str, Any]]:
+        documents = self.groups_collection.find(
+            {"member_ids": user_id}
+        ).sort(
+            [
+                ("created_at", 1),
+                ("_id", 1),
+            ]
+        )
+
+        return [
+            _serialize_document(document)
+            for document in documents
+        ]
+
+    def add_group_member(
+        self,
+        group_id: str,
+        user_id: str,
+    ) -> str:
+        object_id = _to_object_id(group_id)
+
+        if object_id is None:
+            return "not_found"
+
+        # One conditional update, so two people joining at once cannot
+        # push the group past its limit or add the same member twice.
+        result = self.groups_collection.update_one(
+            {
+                "_id": object_id,
+                "member_ids": {"$ne": user_id},
+                "member_ids.{}".format(MAX_GROUP_MEMBERS - 1): {
+                    "$exists": False
+                },
+            },
+            {"$addToSet": {"member_ids": user_id}},
+        )
+
+        if result.modified_count:
+            return "joined"
+
+        group = self.get_group(group_id)
+
+        if group is None:
+            return "not_found"
+
+        if user_id in group["member_ids"]:
+            return "already_member"
+
+        return "full"
+
+    def remove_group_member(
+        self,
+        group_id: str,
+        user_id: str,
+    ) -> bool:
+        object_id = _to_object_id(group_id)
+
+        if object_id is None:
+            return False
+
+        result = self.groups_collection.update_one(
+            {
+                "_id": object_id,
+                "member_ids": user_id,
+            },
+            {"$pull": {"member_ids": user_id}},
+        )
+
+        if not result.modified_count:
+            return False
+
+        # A group nobody belongs to can never be seen again.
+        self.groups_collection.delete_one(
+            {
+                "_id": object_id,
+                "member_ids": {"$size": 0},
+            }
+        )
+
+        return True
+
+    def list_users(
+        self,
+        user_ids: List[str],
+    ) -> List[Dict[str, Any]]:
+        object_ids = [
+            object_id
+            for object_id in (
+                _to_object_id(user_id)
+                for user_id in user_ids
+            )
+            if object_id is not None
+        ]
+
+        if not object_ids:
+            return []
+
+        documents = self.users_collection.find(
+            {"_id": {"$in": object_ids}}
+        )
+
+        return [
+            _serialize_document(document)
+            for document in documents
+        ]
+
+    def list_entries_for_users_in_range(
+        self,
+        feature: str,
+        user_ids: List[str],
+        start_date: str,
+        end_date: str,
+    ) -> List[Dict[str, Any]]:
+        if not user_ids:
+            return []
+
+        documents = self.collection.find(
+            {
+                "feature": feature,
+                "user_id": {"$in": list(user_ids)},
+                "date": {
+                    "$gte": start_date,
+                    "$lte": end_date,
+                },
+            }
+        )
+
+        return [
+            _serialize_document(document)
+            for document in documents
+        ]
