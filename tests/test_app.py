@@ -218,6 +218,25 @@ class WellnessTrackerTestCase(unittest.TestCase):
             errors,
         )
 
+    def test_api_rejects_steps_over_cap(self):
+        response = self.client.post(
+            "/api/entries/steps",
+            json={"date": "2026-10-15", "steps": 100001},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            "Steps must be at most 100,000.",
+            response.get_json()["errors"],
+        )
+
+        accepted = self.client.post(
+            "/api/entries/steps",
+            json={"date": "2026-10-15", "steps": 100000},
+        )
+
+        self.assertEqual(accepted.status_code, 201)
+
     def test_api_rejects_negative_steps(self):
         response = self.client.post(
             "/api/entries/steps",

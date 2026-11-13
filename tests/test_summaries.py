@@ -2,11 +2,14 @@ import unittest
 from datetime import date
 
 from summaries import (
+    daily_step_totals,
     daily_totals,
     format_change,
     goal_percent,
     latest_weight,
     period_change,
+    period_start,
+    steps_total,
     weight_changes,
     window_start,
 )
@@ -20,6 +23,48 @@ def e(entry_id, entry_date, created_at="2026-10-01T00:00:00+00:00", **data):
         "created_at": created_at,
         "data": dict(data, date=entry_date),
     }
+
+
+def steps(entry_date, count):
+    return e("s", entry_date, steps=count)
+
+
+class StepsSummaryTestCase(unittest.TestCase):
+
+    def test_steps_total_sums_inclusive_range_and_ignores_outside(self):
+        entries = [
+            steps("2026-11-08", 4444),
+            steps("2026-11-09", 1000),
+            steps("2026-11-12", 2000),
+            steps("2026-11-12", 500),
+            steps("2026-11-13", 9999),
+        ]
+
+        self.assertEqual(steps_total(entries, "2026-11-09", "2026-11-12"), 3500)
+
+    def test_daily_step_totals_fills_missing_days_with_zero(self):
+        rows = daily_step_totals(
+            [steps("2026-11-12", 700), steps("2026-11-12", 50)],
+            date(2026, 11, 12),
+            7,
+        )
+
+        self.assertEqual(len(rows), 7)
+        self.assertEqual(rows[0], {"date": "2026-11-06", "total_steps": 0})
+        self.assertEqual(rows[-1], {"date": "2026-11-12", "total_steps": 750})
+
+    def test_period_start(self):
+        thursday = date(2026, 11, 12)
+
+        self.assertEqual(period_start("today", thursday), thursday)
+        self.assertEqual(period_start("week", thursday), date(2026, 11, 9))
+        self.assertEqual(period_start("month", thursday), date(2026, 11, 1))
+        self.assertEqual(period_start("week", date(2026, 11, 9)), date(2026, 11, 9))
+        self.assertEqual(period_start("week", date(2026, 12, 2)), date(2026, 11, 30))
+        self.assertEqual(period_start("month", date(2026, 12, 1)), date(2026, 12, 1))
+
+        with self.assertRaises(ValueError):
+            period_start("year", thursday)
 
 
 class SummaryTestCase(unittest.TestCase):

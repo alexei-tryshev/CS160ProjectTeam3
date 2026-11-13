@@ -60,6 +60,57 @@ def goal_percent(total_oz: int, goal_oz: int) -> int:
     return round(100 * total_oz / goal_oz)
 
 
+PERIODS = ("today", "week", "month")
+
+
+def steps_total(
+    entries: List[Dict[str, Any]],
+    start: str,
+    end: str,
+) -> int:
+    """Sum steps for entries dated from ``start`` to ``end`` inclusive."""
+
+    return sum(
+        entry["data"]["steps"]
+        for entry in entries
+        if start <= entry["date"] <= end
+    )
+
+
+def daily_step_totals(
+    entries: List[Dict[str, Any]],
+    today: date,
+    days: int,
+) -> List[Dict[str, Any]]:
+    """Return one steps total per day, oldest first, ending today."""
+
+    return [
+        {
+            "date": day,
+            "total_steps": steps_total(entries, day, day),
+        }
+        for day in (
+            (today - timedelta(days=offset)).isoformat()
+            for offset in range(days - 1, -1, -1)
+        )
+    ]
+
+
+def period_start(period: str, today: date) -> date:
+    """First day of a leaderboard period: weeks start Monday, months on the 1st."""
+
+    if period == "today":
+        return today
+
+    if period == "week":
+        return today - timedelta(days=today.weekday())
+
+    if period == "month":
+        return today.replace(day=1)
+
+    raise ValueError("Unknown period: {}.".format(period))
+
+
 def weight_changes(
     entries: List[Dict[str, Any]],
 ) -> Dict[str, Optional[float]]:

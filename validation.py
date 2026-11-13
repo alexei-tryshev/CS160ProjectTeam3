@@ -36,6 +36,7 @@ def _decimal(
 
 MAX_WATER_AMOUNT_OZ = 350
 MAX_WATER_GOAL_OZ = 700
+MAX_STEPS = 100_000
 
 
 def _whole_number(
@@ -128,7 +129,11 @@ def validate_entry(
 
     elif feature == "steps":
         payload["steps"] = _whole_number(
-            raw, "steps", "Steps", errors
+            raw,
+            "steps",
+            "Steps",
+            errors,
+            maximum=MAX_STEPS,
         )
 
     elif feature == "weight":
