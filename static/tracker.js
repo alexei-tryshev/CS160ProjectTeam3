@@ -21,7 +21,10 @@ document.querySelectorAll("button[data-amount]").forEach(function (button) {
     var accent = styles.getPropertyValue("--accent").trim();
     var muted = styles.getPropertyValue("--muted").trim();
     var grid = styles.getPropertyValue("--border").trim();
-    var isWater = dataElement.dataset.chart === "water-bar";
+    var kind = dataElement.dataset.chart;
+    var isBar = kind === "water-bar" || kind === "steps-bar";
+    var barField = kind === "steps-bar" ? "total_steps" : "total_oz";
+    var barLabel = kind === "steps-bar" ? "Steps" : "Total (fl oz)";
 
     var labels = points.map(function (point) {
         return new Date(point.date + "T00:00:00").toLocaleDateString(undefined, {
@@ -30,10 +33,10 @@ document.querySelectorAll("button[data-amount]").forEach(function (button) {
         });
     });
 
-    var dataset = isWater
+    var dataset = isBar
         ? {
-            label: "Total (fl oz)",
-            data: points.map(function (point) { return point.total_oz; }),
+            label: barLabel,
+            data: points.map(function (point) { return point[barField]; }),
             backgroundColor: accent,
             borderRadius: 4
         }
@@ -47,7 +50,7 @@ document.querySelectorAll("button[data-amount]").forEach(function (button) {
         };
 
     new window.Chart(canvas, {
-        type: isWater ? "bar" : "line",
+        type: isBar ? "bar" : "line",
         data: { labels: labels, datasets: [dataset] },
         options: {
             responsive: true,
@@ -56,7 +59,7 @@ document.querySelectorAll("button[data-amount]").forEach(function (button) {
             scales: {
                 x: { grid: { display: false }, ticks: { color: muted } },
                 y: {
-                    beginAtZero: isWater,
+                    beginAtZero: isBar,
                     grid: { color: grid },
                     ticks: { color: muted }
                 }

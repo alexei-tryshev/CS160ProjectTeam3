@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_tracker_macros.html" import entry_actions, form_buttons, form_errors %}
+{% set active_page = "steps" %}
+{% block title %}Steps | Wellness Tracker{% endblock %}
+{% block content %}
+<header class="page-header">
+    <a class="back-link" href="{{ url_for('main.home') }}">← Back to dashboard</a>
+    <h1>Steps</h1>
+    <p class="subtitle">Record the steps you take each day.</p>
+</header>
+
+{{ form_errors(errors) }}
+
+<div class="card-grid">
+    <section class="card" aria-labelledby="log-heading">
+        <h2 id="log-heading">{% if editing %}Edit entry{% else %}Log steps{% endif %}</h2>
+        <form method="post" action="{{ url_for('steps.page') }}" class="entry-form">
+            {% if editing %}
+                <input type="hidden" name="entry_id" value="{{ form.entry_id }}">
+            {% endif %}
+            <label for="steps">Steps</label>
+            <input id="steps" name="steps" type="number" value="{{ form.get('steps', '') }}" min="0" max="100000" step="1" placeholder="e.g. 8000" required>
+            <label for="date">Date</label>
+            <input id="date" name="date" type="date" value="{{ form.get('date', '') }}" required>
+            {{ form_buttons(editing, url_for('steps.page')) }}
+        </form>
+    </section>
+
+    <section class="card" aria-labelledby="progress-heading">
+        <div class="card-heading">
+            <h2 id="progress-heading">Progress</h2>
+            <nav class="range-buttons" aria-label="Chart period">
+                {% for key, label in range_labels.items() %}
+                    <a{% if key == range_key %} class="is-active"{% endif %} href="{{ url_for('steps.page', range=key) }}">{{ label }}</a>
+                {% endfor %}
+            </nav>
+        </div>
+        <div class="tiles">
+            <div class="tile">
+                <p class="tile-label">Today</p>
+                <p class="tile-value">{{ "{:,}".format(today_total) }}</p>
+            </div>
+            <div class="tile">
+                <p class="tile-label">This week</p>
+                <p class="tile-value">{{ "{:,}".format(week_total) }}</p>
+            </div>
+        </div>
+        <div class="chart-box">
+            <canvas id="trend-chart" role="img" aria-label="Bar chart of daily step totals for the last {{ range_days }} days"></canvas>
+        </div>
+        <script type="application/json" id="chart-data" data-chart="steps-bar">{{ chart|tojson }}</script>
+    </section>
+</div>
+
+<section class="card" aria-labelledby="entries-heading">
+    <h2 id="entries-heading">Recent entries</h2>
+    {% if entries %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Steps</th>
+                        <th scope="col" class="actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                        <tr>
+                            <td>{{ entry.date }}</td>
+                            <td>{{ "{:,}".format(entry.data.steps) }}</td>
+                            <td class="actions">
+                                {{ entry_actions(url_for('steps.page', edit=entry.id), url_for('steps.delete', entry_id=entry.id)) }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty-state">No entries yet. Add the first one above.</p>
+    {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script src="{{ url_for('static', filename='tracker.js') }}" defer></script>
+{% endblock %}
