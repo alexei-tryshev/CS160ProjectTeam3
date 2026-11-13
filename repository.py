@@ -672,14 +672,16 @@ class InMemoryRepository:
 
         return False
 
-    def list_users(
+    def list_member_profiles(
         self,
         user_ids: List[str],
     ) -> List[Dict[str, Any]]:
+        """Return only what group members may see: id and display name."""
+
         wanted = {str(user_id) for user_id in user_ids}
 
         return [
-            deepcopy(user)
+            {"id": user["id"], "display_name": user.get("display_name")}
             for user in self._users
             if user["id"] in wanted
         ]
@@ -1307,10 +1309,12 @@ class MongoRepository:
 
         return True
 
-    def list_users(
+    def list_member_profiles(
         self,
         user_ids: List[str],
     ) -> List[Dict[str, Any]]:
+        """Return only what group members may see: id and display name."""
+
         object_ids = [
             object_id
             for object_id in (
@@ -1324,11 +1328,15 @@ class MongoRepository:
             return []
 
         documents = self.users_collection.find(
-            {"_id": {"$in": object_ids}}
+            {"_id": {"$in": object_ids}},
+            {"display_name": 1},
         )
 
         return [
-            _serialize_document(document)
+            {
+                "id": str(document["_id"]),
+                "display_name": document.get("display_name"),
+            }
             for document in documents
         ]
 

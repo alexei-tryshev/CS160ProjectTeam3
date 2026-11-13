@@ -95,9 +95,10 @@ def page():
         )
 
     groups = _repository().list_groups_for_user(user["id"])
-    group_id = request.args.get("group")
+    group_id = request.args.get("group", "").strip()
 
-    if group_id is not None:
+    # A blank ?group= means "no choice made", same as leaving it out.
+    if group_id:
         selected = _member_group_or_404(group_id)
     else:
         selected = groups[0] if groups else None
@@ -116,7 +117,7 @@ def page():
         member_ids = selected["member_ids"]
 
         rows = leaderboard_rows(
-            _repository().list_users(member_ids),
+            _repository().list_member_profiles(member_ids),
             _repository().list_entries_for_users_in_range(
                 "steps",
                 member_ids,

@@ -190,18 +190,30 @@ class GroupsContract:
         self.assertIsNone(self.repo.get_group_by_code(group["join_code"]))
         self.assertEqual(self.repo.list_groups_for_user(bob), [])
 
-    def test_list_users_returns_requested_users_and_skips_unknown(self):
+    def test_list_member_profiles_returns_only_id_and_name(self):
         alice, bob = self.user("Alice"), self.user("Bob")
         self.user("Carol")
 
-        users = self.repo.list_users([alice, bob, "abc", "0123456789abcdef01234567"])
+        profiles = self.repo.list_member_profiles(
+            [alice, bob, "abc", "0123456789abcdef01234567"]
+        )
 
         self.assertEqual(
-            sorted(user["display_name"] for user in users),
-            ["Alice", "Bob"],
+            sorted(profiles, key=lambda profile: profile["display_name"]),
+            [
+                {"id": alice, "display_name": "Alice"},
+                {"id": bob, "display_name": "Bob"},
+            ],
         )
-        self.assertEqual({user["id"] for user in users}, {alice, bob})
-        self.assertEqual(self.repo.list_users([]), [])
+        self.assertEqual(self.repo.list_member_profiles([]), [])
+
+    def test_list_member_profiles_handles_user_without_name(self):
+        legacy = self.repo.create_user("legacy@example.com", "hash")["id"]
+
+        self.assertEqual(
+            self.repo.list_member_profiles([legacy]),
+            [{"id": legacy, "display_name": None}],
+        )
 
     def test_list_entries_for_users_in_range(self):
         def log(user_id, day, count):

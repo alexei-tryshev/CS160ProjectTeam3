@@ -321,6 +321,45 @@ class GroupsPageTestCase(unittest.TestCase):
         self.assertNotIn("<b>x</b>", body)
         self.assertNotIn("<i>g</i>", body)
 
+    def test_flash_messages_escape_group_names(self):
+        tricky, _ = self.as_user("tricky@example.com", "Tricky")
+        group = self.create(client=tricky, name="<i>g</i>")
+        escaped = "&lt;i&gt;g&lt;/i&gt;"
+
+        joined = self.join(self.alice, group["join_code"])
+        again = self.join(self.alice, group["join_code"])
+        left = self.alice.post(
+            "/groups/{}/leave".format(group["id"]),
+            follow_redirects=True,
+        ).get_data(as_text=True)
+
+        self.assertIn("You joined {}.".format(escaped), joined)
+        self.assertIn("already in {}.".format(escaped), again)
+        self.assertIn("You left {}.".format(escaped), left)
+
+        for body in (joined, again, left):
+            self.assertNotIn("<i>g</i>", body)
+
+    def test_blank_group_param_shows_first_group(self):
+        group = self.create()
+        self.alice.get("/groups")  # consume the "Group created" message
+
+        response = self.alice.get("/groups?group=&period=week")
+        body = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(group["join_code"], body)
+        self.assertIn(
+            'href="/groups?group={}&amp;period=week" aria-current="true"'.format(group["id"]),
+            body,
+        )
+
+    def test_blank_group_param_with_no_groups_shows_empty_state(self):
+        response = self.alice.get("/groups?group=")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('action="/groups/join"', response.get_data(as_text=True))
+
     def test_non_member_gets_404(self):
         group = self.create()
         carol, _ = self.as_user("carol@example.com", "Carol")
