@@ -17,9 +17,13 @@ from blueprints.entry_actions import (
     save_entry_form,
 )
 from summaries import (
+    PERIODS,
     calories_total,
     daily_calorie_totals,
+    daily_macro_totals,
     format_number,
+    macro_percentages,
+    macros_total,
     period_start,
     window_start,
 )
@@ -37,10 +41,22 @@ RANGE_LABELS = {
 }
 DEFAULT_RANGE = "1w"
 
+PERIOD_LABELS = {
+    "today": "Today",
+    "week": "Week",
+    "month": "Month",
+}
+DEFAULT_PERIOD = "today"
+
 
 @nutrition_bp.app_template_filter("nutrition_number")
 def nutrition_number(value):
     return format_number(value)
+
+
+@nutrition_bp.get("/macros")
+def macros_redirect():
+    return redirect(url_for("nutrition.page", _anchor="macros"))
 
 
 @nutrition_bp.route(
@@ -71,22 +87,37 @@ def page():
     if range_key not in RANGE_DAYS:
         range_key = DEFAULT_RANGE
 
+    period = request.args.get("period", DEFAULT_PERIOD)
+    if period not in PERIODS:
+        period = DEFAULT_PERIOD
+
     today = date.today()
     today_iso = today.isoformat()
     days = RANGE_DAYS[range_key]
     week_start = period_start("week", today).isoformat()
-    # One query covers both the chart window and the current week;
+    month_start = period_start("month", today).isoformat()
+    macro_start = period_start(period, today).isoformat()
+
+    # One query covers the chart window, current week, and current month;
     # ending at today keeps future-dated entries out of the totals.
+    earliest_start = min(
+        window_start(days, today),
+        week_start,
+        month_start,
+    )
     window_entries = repository().list_entries_in_range(
         "nutrition",
         current_user_id(),
-        min(window_start(days, today), week_start),
+        earliest_start,
         today_iso,
     )
     entries = repository().list_entries(
         "nutrition",
         current_user_id(),
     )
+    macro_totals = macros_total(window_entries, macro_start, today_iso)
+    macro_percents = macro_percentages(macro_totals)
+
     return render_template(
         "nutrition.html",
         form=form,
@@ -99,6 +130,11 @@ def page():
         range_labels=RANGE_LABELS,
         range_days=days,
         chart=daily_calorie_totals(window_entries, today, days),
+        period=period,
+        period_labels=PERIOD_LABELS,
+        macro_totals=macro_totals,
+        macro_percents=macro_percents,
+        macro_chart=daily_macro_totals(window_entries, today, days),
     ), status
 
 

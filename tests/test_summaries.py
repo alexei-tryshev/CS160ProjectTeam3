@@ -2,12 +2,18 @@ import unittest
 from datetime import date
 
 from summaries import (
+    calories_total,
+    daily_calorie_totals,
+    daily_macro_totals,
     daily_step_totals,
     daily_totals,
     format_change,
+    format_number,
     goal_percent,
     latest_weight,
     leaderboard_rows,
+    macro_percentages,
+    macros_total,
     period_change,
     period_start,
     steps_total,
@@ -30,8 +36,85 @@ def steps(entry_date, count):
     return e("s", entry_date, steps=count)
 
 
-class StepsSummaryTestCase(unittest.TestCase):
+def meal(entry_date, calories=400.0, protein_g=20.0, carbs_g=50.0, fat_g=10.0):
+    return e(
+        "n",
+        entry_date,
+        food="Meal",
+        calories=calories,
+        protein_g=protein_g,
+        carbs_g=carbs_g,
+        fat_g=fat_g,
+    )
 
+
+class NutritionSummaryTestCase(unittest.TestCase):
+    def test_calories_total_sums_inclusive_range_and_ignores_outside(self):
+        entries = [
+            meal("2026-11-08", calories=500.0),
+            meal("2026-11-09", calories=300.5),
+            meal("2026-11-12", calories=450.0),
+            meal("2026-11-12", calories=150.2),
+            meal("2026-11-13", calories=900.0),
+        ]
+        self.assertEqual(calories_total(entries, "2026-11-09", "2026-11-12"), 900.7)
+
+    def test_daily_calorie_totals_fills_missing_days_with_zero(self):
+        rows = daily_calorie_totals(
+            [meal("2026-11-12", calories=400.0), meal("2026-11-12", calories=250.5)],
+            date(2026, 11, 12),
+            7,
+        )
+        self.assertEqual(len(rows), 7)
+        self.assertEqual(rows[0], {"date": "2026-11-06", "total_calories": 0})
+        self.assertEqual(rows[-1], {"date": "2026-11-12", "total_calories": 650.5})
+
+    def test_macros_total_and_percentages(self):
+        entries = [
+            meal("2026-11-08", protein_g=99.0, carbs_g=99.0, fat_g=99.0),
+            meal("2026-11-10", protein_g=25.0, carbs_g=50.0, fat_g=15.0),
+            meal("2026-11-12", protein_g=15.0, carbs_g=50.0, fat_g=45.0),
+        ]
+        totals = macros_total(entries, "2026-11-09", "2026-11-12")
+        self.assertEqual(
+            totals,
+            {"protein_g": 40.0, "carbs_g": 100.0, "fat_g": 60.0},
+        )
+        self.assertEqual(
+            macro_percentages(totals),
+            {"protein_g": 20, "carbs_g": 50, "fat_g": 30},
+        )
+        self.assertEqual(
+            macro_percentages({"protein_g": 0.0, "carbs_g": 0.0, "fat_g": 0.0}),
+            {"protein_g": 0, "carbs_g": 0, "fat_g": 0},
+        )
+
+    def test_daily_macro_totals_fills_missing_days_with_zero(self):
+        rows = daily_macro_totals(
+            [
+                meal("2026-11-12", protein_g=20.0, carbs_g=30.0, fat_g=10.0),
+                meal("2026-11-12", protein_g=10.5, carbs_g=15.0, fat_g=5.5),
+            ],
+            date(2026, 11, 12),
+            7,
+        )
+        self.assertEqual(len(rows), 7)
+        self.assertEqual(
+            rows[0],
+            {"date": "2026-11-06", "protein_g": 0, "carbs_g": 0, "fat_g": 0},
+        )
+        self.assertEqual(
+            rows[-1],
+            {"date": "2026-11-12", "protein_g": 30.5, "carbs_g": 45.0, "fat_g": 15.5},
+        )
+
+    def test_format_number(self):
+        self.assertEqual(format_number(0.0), "0")
+        self.assertEqual(format_number(150.0), "150")
+        self.assertEqual(format_number(1450.5), "1,450.5")
+
+
+class StepsSummaryTestCase(unittest.TestCase):
     def test_steps_total_sums_inclusive_range_and_ignores_outside(self):
         entries = [
             steps("2026-11-08", 4444),
@@ -40,7 +123,6 @@ class StepsSummaryTestCase(unittest.TestCase):
             steps("2026-11-12", 500),
             steps("2026-11-13", 9999),
         ]
-
         self.assertEqual(steps_total(entries, "2026-11-09", "2026-11-12"), 3500)
 
     def test_daily_step_totals_fills_missing_days_with_zero(self):
@@ -49,43 +131,36 @@ class StepsSummaryTestCase(unittest.TestCase):
             date(2026, 11, 12),
             7,
         )
-
         self.assertEqual(len(rows), 7)
         self.assertEqual(rows[0], {"date": "2026-11-06", "total_steps": 0})
         self.assertEqual(rows[-1], {"date": "2026-11-12", "total_steps": 750})
 
     def test_period_start(self):
         thursday = date(2026, 11, 12)
-
         self.assertEqual(period_start("today", thursday), thursday)
         self.assertEqual(period_start("week", thursday), date(2026, 11, 9))
         self.assertEqual(period_start("month", thursday), date(2026, 11, 1))
         self.assertEqual(period_start("week", date(2026, 11, 9)), date(2026, 11, 9))
         self.assertEqual(period_start("week", date(2026, 12, 2)), date(2026, 11, 30))
         self.assertEqual(period_start("month", date(2026, 12, 1)), date(2026, 12, 1))
-
         with self.assertRaises(ValueError):
             period_start("year", thursday)
 
 
 def member(user_id, name=None):
     user = {"id": user_id, "email": "{}@example.com".format(user_id)}
-
     if name is not None:
         user["display_name"] = name
-
     return user
 
 
 def user_steps(user_id, entry_date, count):
     entry = steps(entry_date, count)
     entry["user_id"] = user_id
-
     return entry
 
 
 class LeaderboardTestCase(unittest.TestCase):
-
     START = "2026-11-09"
     END = "2026-11-12"
 
@@ -103,7 +178,6 @@ class LeaderboardTestCase(unittest.TestCase):
                 user_steps("b", "2026-11-12", 2500),
             ],
         )
-
         self.assertEqual(
             rows,
             [
@@ -117,7 +191,6 @@ class LeaderboardTestCase(unittest.TestCase):
             [member("a", "Alice"), member("d", "Dana")],
             [user_steps("a", "2026-11-12", 10)],
         )
-
         self.assertEqual([(row["name"], row["steps"]) for row in rows], [("Alice", 10), ("Dana", 0)])
 
     def test_ties_share_rank_alphabetical_and_next_rank_skips(self):
@@ -129,7 +202,6 @@ class LeaderboardTestCase(unittest.TestCase):
                 user_steps("c", "2026-11-12", 100),
             ],
         )
-
         self.assertEqual(
             [(row["rank"], row["name"]) for row in rows],
             [(1, "adam"), (1, "Bea"), (3, "Cy")],
@@ -137,14 +209,12 @@ class LeaderboardTestCase(unittest.TestCase):
 
     def test_all_zero_members_share_first_place(self):
         rows = self.rows([member("b", "Bob"), member("a", "Alice")], [])
-
         self.assertEqual([(row["rank"], row["name"]) for row in rows], [(1, "Alice"), (1, "Bob")])
 
     def test_marks_viewer_row(self):
         rows = self.rows(
             [member("a", "Alice"), member("b", "Bob")], [], viewer_id="b"
         )
-
         self.assertEqual([row["user_id"] for row in rows if row["is_you"]], ["b"])
 
     def test_ignores_entries_from_non_members(self):
@@ -152,7 +222,6 @@ class LeaderboardTestCase(unittest.TestCase):
             [member("a", "Alice")],
             [user_steps("z", "2026-11-12", 99999), user_steps("a", "2026-11-12", 1)],
         )
-
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["steps"], 1)
 
@@ -166,7 +235,6 @@ class LeaderboardTestCase(unittest.TestCase):
                 user_steps("a", "2026-11-12", 4),
             ],
         )
-
         self.assertEqual(rows[0]["steps"], 7)
 
     def test_week_spanning_month_boundary(self):
@@ -176,7 +244,6 @@ class LeaderboardTestCase(unittest.TestCase):
             user_steps("a", "2026-12-01", 200),
         ]
         members = [member("a", "Alice")]
-
         week = self.rows(
             members,
             entries,
@@ -189,19 +256,16 @@ class LeaderboardTestCase(unittest.TestCase):
             start=period_start("month", today).isoformat(),
             end=today.isoformat(),
         )
-
         self.assertEqual(week[0]["steps"], 1200)
         self.assertEqual(month[0]["steps"], 200)
 
     def test_missing_display_name_falls_back_to_member(self):
         rows = self.rows([member("a")], [])
-
         self.assertEqual(rows[0]["name"], "Member")
         self.assertNotIn("example.com", str(rows))
 
 
 class SummaryTestCase(unittest.TestCase):
-
     def test_daily_totals_zero_fills_seven_days_ending_today(self):
         entries = [
             e("a", "2026-10-25", amount_oz=16),
@@ -210,9 +274,7 @@ class SummaryTestCase(unittest.TestCase):
             e("d", "2026-10-18", amount_oz=9),
             e("f", "2026-10-26", amount_oz=9),
         ]
-
         totals = daily_totals(entries, date(2026, 10, 25))
-
         self.assertEqual(totals[0]["date"], "2026-10-19")
         self.assertEqual(len(totals), 7)
         self.assertEqual(totals[-1], {"date": "2026-10-25", "total_oz": 24})
@@ -235,14 +297,12 @@ class SummaryTestCase(unittest.TestCase):
             e("a", "2026-10-20", weight_lb=169.3),
             e("b", "2026-10-22", weight_lb=168.8),
         ]
-
         self.assertEqual(weight_changes(entries), {"a": None, "b": -0.5, "c": -0.3})
 
         same_day = [
             e("x", "2026-10-25", "2026-10-25T08:00:00+00:00", weight_lb=170.0),
             e("y", "2026-10-25", "2026-10-25T20:00:00+00:00", weight_lb=170.4),
         ]
-
         self.assertEqual(weight_changes(same_day)["y"], 0.4)
 
     def test_latest_and_period_change(self):
@@ -250,21 +310,19 @@ class SummaryTestCase(unittest.TestCase):
             e("a", "2026-10-20", weight_lb=169.3),
             e("c", "2026-10-25", weight_lb=168.5),
         ]
-
         self.assertEqual(latest_weight(entries), 168.5)
         self.assertEqual(period_change(entries), -0.8)
         self.assertIsNone(period_change(entries[:1]))
         self.assertIsNone(latest_weight([]))
 
     def test_format_change(self):
-        self.assertEqual(format_change(None), "—")
+        self.assertEqual(format_change(None), "\u2014")
         self.assertEqual(format_change(0.3), "+0.3")
-        self.assertEqual(format_change(-0.8), "−0.8")
+        self.assertEqual(format_change(-0.8), "\u22120.8")
         self.assertEqual(format_change(0.0), "0.0")
 
     def test_validate_goal(self):
         self.assertEqual(validate_goal({"water_goal_oz": " 80 "}), (80, []))
-
         for bad in ("", "0", "-5", "2.5", "abc"):
             goal, errors = validate_goal({"water_goal_oz": bad})
             self.assertIsNone(goal)
@@ -275,7 +333,6 @@ class SummaryTestCase(unittest.TestCase):
 
     def test_validate_entry_normalizes_compact_iso_dates(self):
         payload, errors = validate_entry("water", {"date": "20261024", "amount_oz": "1"})
-
         self.assertEqual(errors, [])
         self.assertEqual(payload["date"], "2026-10-24")
 

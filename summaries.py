@@ -90,6 +90,9 @@ def daily_step_totals(
     ]
 
 
+MACRO_FIELDS = ("protein_g", "carbs_g", "fat_g")
+
+
 def calories_total(
     entries: List[Dict[str, Any]],
     start: str,
@@ -122,6 +125,60 @@ def daily_calorie_totals(
             for offset in range(days - 1, -1, -1)
         )
     ]
+
+
+def macros_total(
+    entries: List[Dict[str, Any]],
+    start: str,
+    end: str,
+) -> Dict[str, float]:
+    """Sum protein, carbs, and fat (g) from ``start`` to ``end`` inclusive."""
+    in_range = [
+        entry
+        for entry in entries
+        if start <= entry["date"] <= end
+    ]
+    return {
+        field: round(
+            sum(entry["data"][field] for entry in in_range),
+            1,
+        )
+        for field in MACRO_FIELDS
+    }
+
+
+def macro_percentages(
+    totals: Dict[str, float],
+) -> Dict[str, int]:
+    """Return each macronutrient's share (0-100) of total macronutrient grams."""
+    total_grams = sum(totals.get(field, 0.0) for field in MACRO_FIELDS)
+    if total_grams <= 0:
+        return {field: 0 for field in MACRO_FIELDS}
+    return {
+        field: round(100 * totals.get(field, 0.0) / total_grams)
+        for field in MACRO_FIELDS
+    }
+
+
+def daily_macro_totals(
+    entries: List[Dict[str, Any]],
+    today: date,
+    days: int = 7,
+) -> List[Dict[str, Any]]:
+    """Return daily protein, carbs, and fat totals, oldest first, ending today."""
+    rows: List[Dict[str, Any]] = []
+    for offset in range(days - 1, -1, -1):
+        day = (today - timedelta(days=offset)).isoformat()
+        totals = macros_total(entries, day, day)
+        rows.append(
+            {
+                "date": day,
+                "protein_g": totals["protein_g"],
+                "carbs_g": totals["carbs_g"],
+                "fat_g": totals["fat_g"],
+            }
+        )
+    return rows
 
 
 def format_number(value: float) -> str:

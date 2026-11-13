@@ -341,6 +341,18 @@ h2 {
     background: var(--accent);
 }
 
+.progress-bar--protein {
+    background: var(--accent);
+}
+
+.progress-bar--carbs {
+    background: #2b6cb0;
+}
+
+.progress-bar--fat {
+    background: #d97706;
+}
+
 .progress-caption {
     margin: 0;
     color: var(--muted);
@@ -411,6 +423,10 @@ h2 {
     gap: 12px;
 }
 
+.tiles--macros {
+    grid-template-columns: repeat(3, 1fr);
+}
+
 .tile {
     padding: 12px 16px;
     border: 1px solid var(--border);
@@ -427,6 +443,12 @@ h2 {
     margin: 0;
     font-size: 26px;
     font-weight: bold;
+}
+
+.tile-meta {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
 }
 
 .chart-box {
@@ -534,7 +556,8 @@ td.actions form {
     .card-grid--weight,
     .feature-grid,
     .field-row,
-    .tiles {
+    .tiles,
+    .tiles--macros {
         grid-template-columns: 1fr;
     }
 

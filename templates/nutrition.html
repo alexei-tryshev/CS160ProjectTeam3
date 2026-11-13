@@ -8,7 +8,7 @@
 <header class="page-header">
     <a class="back-link" href="{{ url_for('main.home') }}">&larr; Back to dashboard</a>
     <h1>Nutrition tracking</h1>
-    <p class="subtitle">Record the food you eat and track your daily calorie intake.</p>
+    <p class="subtitle">Record the food you eat and track your daily calorie and macronutrient intake.</p>
 </header>
 
 {{ form_errors(errors) }}
@@ -58,7 +58,7 @@
             <h2 id="progress-heading">Progress</h2>
             <nav class="range-buttons" aria-label="Chart period">
                 {% for key, label in range_labels.items() %}
-                    <a{% if key == range_key %} class="is-active"{% endif %} href="{{ url_for('nutrition.page', range=key) }}">{{ label }}</a>
+                    <a{% if key == range_key %} class="is-active"{% endif %} href="{{ url_for('nutrition.page', range=key, period=period) }}">{{ label }}</a>
                 {% endfor %}
             </nav>
         </div>
@@ -80,6 +80,54 @@
         <script type="application/json" id="chart-data" data-chart="nutrition-bar">{{ chart|tojson }}</script>
     </section>
 </div>
+
+<section class="card" id="macros" aria-labelledby="macros-heading">
+    <div class="card-heading">
+        <div>
+            <h2 id="macros-heading">Macronutrient intake</h2>
+            <p class="group-meta">Protein, carbohydrate, and fat breakdown from your logged food entries.</p>
+        </div>
+        <nav class="range-buttons" aria-label="Macronutrient period">
+            {% for key, label in period_labels.items() %}
+                <a href="{{ url_for('nutrition.page', period=key, range=range_key) }}"{% if key == period %} aria-current="true" class="is-active"{% endif %}>{{ label }}</a>
+            {% endfor %}
+        </nav>
+    </div>
+
+    <div class="tiles tiles--macros">
+        <div class="tile">
+            <p class="tile-label">Protein</p>
+            <p class="tile-value">{{ macro_totals.protein_g|nutrition_number }} g</p>
+            <div class="progress" role="progressbar" aria-label="Protein share of macronutrients" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ macro_percents.protein_g }}">
+                <div class="progress-bar progress-bar--protein" style="width: {{ macro_percents.protein_g }}%"></div>
+            </div>
+            <p class="tile-meta">{{ macro_percents.protein_g }}% of macros</p>
+        </div>
+
+        <div class="tile">
+            <p class="tile-label">Carbohydrates</p>
+            <p class="tile-value">{{ macro_totals.carbs_g|nutrition_number }} g</p>
+            <div class="progress" role="progressbar" aria-label="Carbohydrates share of macronutrients" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ macro_percents.carbs_g }}">
+                <div class="progress-bar progress-bar--carbs" style="width: {{ macro_percents.carbs_g }}%"></div>
+            </div>
+            <p class="tile-meta">{{ macro_percents.carbs_g }}% of macros</p>
+        </div>
+
+        <div class="tile">
+            <p class="tile-label">Fat</p>
+            <p class="tile-value">{{ macro_totals.fat_g|nutrition_number }} g</p>
+            <div class="progress" role="progressbar" aria-label="Fat share of macronutrients" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ macro_percents.fat_g }}">
+                <div class="progress-bar progress-bar--fat" style="width: {{ macro_percents.fat_g }}%"></div>
+            </div>
+            <p class="tile-meta">{{ macro_percents.fat_g }}% of macros</p>
+        </div>
+    </div>
+
+    <div class="chart-box">
+        <canvas id="macro-chart" role="img" aria-label="Bar chart of daily macronutrient totals in grams for the last {{ range_days }} days"></canvas>
+    </div>
+    <script type="application/json" id="macro-chart-data" data-chart="macros-bar">{{ macro_chart|tojson }}</script>
+</section>
 
 <section class="card" aria-labelledby="entries-heading">
     <h2 id="entries-heading">Recent entries</h2>
