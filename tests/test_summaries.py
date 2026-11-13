@@ -7,6 +7,7 @@ from summaries import (
     format_change,
     goal_percent,
     latest_weight,
+    leaderboard_rows,
     period_change,
     period_start,
     steps_total,
@@ -65,6 +66,138 @@ class StepsSummaryTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             period_start("year", thursday)
+
+
+def member(user_id, name=None):
+    user = {"id": user_id, "email": "{}@example.com".format(user_id)}
+
+    if name is not None:
+        user["display_name"] = name
+
+    return user
+
+
+def user_steps(user_id, entry_date, count):
+    entry = steps(entry_date, count)
+    entry["user_id"] = user_id
+
+    return entry
+
+
+class LeaderboardTestCase(unittest.TestCase):
+
+    START = "2026-11-09"
+    END = "2026-11-12"
+
+    def rows(self, members, entries, viewer_id="a", start=None, end=None):
+        return leaderboard_rows(
+            members, entries, start or self.START, end or self.END, viewer_id
+        )
+
+    def test_ranks_by_total_steps_and_sums_multiple_entries(self):
+        rows = self.rows(
+            [member("a", "Alice"), member("b", "Bob")],
+            [
+                user_steps("a", "2026-11-12", 5000),
+                user_steps("b", "2026-11-10", 4000),
+                user_steps("b", "2026-11-12", 2500),
+            ],
+        )
+
+        self.assertEqual(
+            rows,
+            [
+                {"rank": 1, "user_id": "b", "name": "Bob", "steps": 6500, "is_you": False},
+                {"rank": 2, "user_id": "a", "name": "Alice", "steps": 5000, "is_you": True},
+            ],
+        )
+
+    def test_member_with_no_entries_listed_with_zero(self):
+        rows = self.rows(
+            [member("a", "Alice"), member("d", "Dana")],
+            [user_steps("a", "2026-11-12", 10)],
+        )
+
+        self.assertEqual([(row["name"], row["steps"]) for row in rows], [("Alice", 10), ("Dana", 0)])
+
+    def test_ties_share_rank_alphabetical_and_next_rank_skips(self):
+        rows = self.rows(
+            [member("c", "Cy"), member("b", "Bea"), member("a", "adam")],
+            [
+                user_steps("a", "2026-11-12", 5000),
+                user_steps("b", "2026-11-12", 5000),
+                user_steps("c", "2026-11-12", 100),
+            ],
+        )
+
+        self.assertEqual(
+            [(row["rank"], row["name"]) for row in rows],
+            [(1, "adam"), (1, "Bea"), (3, "Cy")],
+        )
+
+    def test_all_zero_members_share_first_place(self):
+        rows = self.rows([member("b", "Bob"), member("a", "Alice")], [])
+
+        self.assertEqual([(row["rank"], row["name"]) for row in rows], [(1, "Alice"), (1, "Bob")])
+
+    def test_marks_viewer_row(self):
+        rows = self.rows(
+            [member("a", "Alice"), member("b", "Bob")], [], viewer_id="b"
+        )
+
+        self.assertEqual([row["user_id"] for row in rows if row["is_you"]], ["b"])
+
+    def test_ignores_entries_from_non_members(self):
+        rows = self.rows(
+            [member("a", "Alice")],
+            [user_steps("z", "2026-11-12", 99999), user_steps("a", "2026-11-12", 1)],
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["steps"], 1)
+
+    def test_future_and_before_start_entries_do_not_count(self):
+        rows = self.rows(
+            [member("a", "Alice")],
+            [
+                user_steps("a", "2026-11-13", 7000),
+                user_steps("a", "2026-11-08", 8000),
+                user_steps("a", "2026-11-09", 3),
+                user_steps("a", "2026-11-12", 4),
+            ],
+        )
+
+        self.assertEqual(rows[0]["steps"], 7)
+
+    def test_week_spanning_month_boundary(self):
+        today = date(2026, 12, 2)
+        entries = [
+            user_steps("a", "2026-11-30", 1000),
+            user_steps("a", "2026-12-01", 200),
+        ]
+        members = [member("a", "Alice")]
+
+        week = self.rows(
+            members,
+            entries,
+            start=period_start("week", today).isoformat(),
+            end=today.isoformat(),
+        )
+        month = self.rows(
+            members,
+            entries,
+            start=period_start("month", today).isoformat(),
+            end=today.isoformat(),
+        )
+
+        self.assertEqual(week[0]["steps"], 1200)
+        self.assertEqual(month[0]["steps"], 200)
+
+    def test_missing_display_name_falls_back_to_member(self):
+        rows = self.rows([member("a")], [])
+
+        self.assertEqual(rows[0]["name"], "Member")
+        self.assertNotIn("example.com", str(rows))
 
 
 class SummaryTestCase(unittest.TestCase):

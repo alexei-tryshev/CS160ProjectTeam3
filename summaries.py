@@ -111,6 +111,49 @@ def period_start(period: str, today: date) -> date:
     raise ValueError("Unknown period: {}.".format(period))
 
 
+def leaderboard_rows(
+    members: List[Dict[str, Any]],
+    entries: List[Dict[str, Any]],
+    start: str,
+    end: str,
+    viewer_id: str,
+) -> List[Dict[str, Any]]:
+    """Rank group members by steps from ``start`` to ``end`` inclusive.
+
+    Every member gets a row, even with no steps. Equal totals share a
+    rank and the next rank skips (1, 1, 3). Rows carry only a name and
+    a total, never an email or individual entries.
+    """
+
+    totals = {member["id"]: 0 for member in members}
+
+    for entry in entries:
+        if entry["user_id"] in totals and start <= entry["date"] <= end:
+            totals[entry["user_id"]] += entry["data"]["steps"]
+
+    rows = [
+        {
+            "user_id": member["id"],
+            "name": member.get("display_name") or "Member",
+            "steps": totals[member["id"]],
+            "is_you": member["id"] == viewer_id,
+        }
+        for member in members
+    ]
+
+    rows.sort(key=lambda row: (-row["steps"], row["name"].lower()))
+
+    for position, row in enumerate(rows):
+        tied_with_previous = (
+            position > 0 and rows[position - 1]["steps"] == row["steps"]
+        )
+        row["rank"] = (
+            rows[position - 1]["rank"] if tied_with_previous else position + 1
+        )
+
+    return rows
+
+
 def weight_changes(
     entries: List[Dict[str, Any]],
 ) -> Dict[str, Optional[float]]:
