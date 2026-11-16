@@ -16,6 +16,7 @@ from blueprints.steps import steps_bp
 from blueprints.tracking import tracking_bp
 from blueprints.water import water_bp
 from blueprints.weight import weight_bp
+from blueprints.meal_plan import meal_plan_bp
 from repository import InMemoryRepository, MongoRepository
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -111,6 +112,7 @@ def create_app(test_config: Dict[str, Any] = None) -> Flask:
     app.register_blueprint(weight_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(meal_plan_bp)
 
     return app
 

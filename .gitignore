@@ -14,6 +14,9 @@ __pycache__/
 .env
 *.log
 
+# Keep the safe template tracked
+!.env.example
+
 # Test and build output
 .pytest_cache/
 build/
@@ -23,5 +26,4 @@ dist/
 .DS_Store
 Thumbs.db
 
-#environment variables
-.env.example
+
