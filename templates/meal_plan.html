@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "_tracker_macros.html" import form_errors %}
+{% set active_page = "meal_plan" %}
+
+{% block title %}Workout meal planning | Wellness Tracker{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <a class="back-link" href="{{ url_for('main.home') }}">&larr; Back to dashboard</a>
+    <h1>Workout meal planning</h1>
+    <p class="subtitle">Set your workout goal to get daily calorie and macro targets, then see what's left to eat today.</p>
+</header>
+
+{{ form_errors(errors) }}
+
+{% if editing %}
+<section class="card card--narrow" aria-labelledby="plan-heading">
+    <h2 id="plan-heading">{% if plan %}Edit your plan{% else %}Set up your plan{% endif %}</h2>
+    <form method="post" action="{{ url_for('meal_plan.page') }}" class="entry-form">
+        <label for="goal">Goal</label>
+        <select id="goal" name="goal" required>
+            <option value="">Choose a goal</option>
+            {% for key, goal in goals.items() %}
+                <option value="{{ key }}"{% if form.get('goal') == key %} selected{% endif %}>{{ goal.label }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="activity">Activity level</label>
+        <select id="activity" name="activity" required>
+            <option value="">Choose an activity level</option>
+            {% for key, level in activity_levels.items() %}
+                <option value="{{ key }}"{% if form.get('activity') == key %} selected{% endif %}>{{ level.label }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="weight_lb">Current weight (lb)</label>
+        <input id="weight_lb" name="weight_lb" type="number" min="70" max="700" step="0.1" value="{{ form.get('weight_lb', '') }}" required>
+        <p class="field-hint">Filled in from your latest Weight entry when you have one.</p>
+
+        <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Save plan</button>
+            {% if plan %}<a class="btn btn-secondary" href="{{ url_for('meal_plan.page') }}">Cancel</a>{% endif %}
+        </div>
+    </form>
+</section>
+{% else %}
+<section class="card" aria-labelledby="targets-heading">
+    <div class="card-heading">
+        <div>
+            <h2 id="targets-heading">Today's targets</h2>
+            <p class="group-meta">{{ goals[plan.goal].label }} &middot; {{ activity_levels[plan.activity].label }} &middot; {{ plan.weight_lb }} lb</p>
+        </div>
+        <a class="btn btn-secondary" href="{{ url_for('meal_plan.page', edit=1) }}">Edit plan</a>
+    </div>
+
+    <div class="tiles">
+        {% for key, label, unit in [("calories", "Calories", "kcal"), ("protein_g", "Protein", "g"), ("carbs_g", "Carbohydrates", "g"), ("fat_g", "Fat", "g")] %}
+        <div class="tile">
+            <p class="tile-label">{{ label }}</p>
+            <p class="tile-value">{{ eaten[key]|round|int }} / {{ targets[key] }} {{ unit }}</p>
+            <div class="progress" role="progressbar" aria-label="{{ label }} eaten today out of target" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percents[key] }}">
+                <div class="progress-bar{% if key != 'calories' %} progress-bar--{{ key[:-2] }}{% endif %}" style="width: {{ percents[key] }}%"></div>
+            </div>
+            <p class="tile-meta">{{ left[key]|round|int }} {{ unit }} left</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="card" aria-labelledby="meals-heading">
+    <h2 id="meals-heading">Suggested meals</h2>
+    {% if meals %}
+        <p class="group-meta">These fit in the {{ left.calories|round|int }} kcal you have left today, highest protein first.</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th scope="col">Meal</th><th scope="col">Calories</th><th scope="col">Protein</th><th scope="col">Carbs</th><th scope="col">Fat</th></tr>
+                </thead>
+                <tbody>
+                    {% for meal in meals %}
+                    <tr>
+                        <td>{{ meal.name }}</td>
+                        <td>{{ meal.calories }} kcal</td>
+                        <td>{{ meal.protein_g }} g</td>
+                        <td>{{ meal.carbs_g }} g</td>
+                        <td>{{ meal.fat_g }} g</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty-state">You've reached today's calorie target. Nice work!</p>
+    {% endif %}
+    <p class="field-hint">Log what you eat on the <a href="{{ url_for('nutrition.page') }}">Nutrition</a> page to update these numbers.</p>
+</section>
+{% endif %}
+{% endblock %}
