@@ -12,17 +12,19 @@
 {% endmacro %}
 
 {% macro entry_actions(edit_url, delete_url) %}
-    <a href="{{ edit_url }}">Edit</a> ·
-    <form method="post" action="{{ delete_url }}" onsubmit="return confirm('Delete this entry?')">
-        <button class="btn-link" type="submit">Delete</button>
-    </form>
+    <span class="action-group">
+        <a class="action-link" href="{{ edit_url }}">Edit</a>
+        <form method="post" action="{{ delete_url }}" onsubmit="return confirm('Delete this entry?')">
+            <button class="btn-link btn-link--danger" type="submit">Delete</button>
+        </form>
+    </span>
 {% endmacro %}
 
 {% macro form_buttons(editing, cancel_url) %}
     {% if editing %}
         <div class="form-actions">
             <button class="btn btn-primary" type="submit">Update entry</button>
-            <a href="{{ cancel_url }}">Cancel</a>
+            <a class="btn btn-secondary" href="{{ cancel_url }}">Cancel</a>
         </div>
     {% else %}
         <button class="btn btn-primary" type="submit">Save entry</button>

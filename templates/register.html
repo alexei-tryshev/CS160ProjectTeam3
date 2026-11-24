@@ -1,109 +1,52 @@
 {% extends "base.html" %}
 
-{% block title %}
-    Create Account | Wellness Tracker
-{% endblock %}
+{% block title %}Create Account | Wellness Tracker{% endblock %}
 
 {% block content %}
-<section class="card">
-    <p class="eyebrow">Account setup</p>
+<div class="auth-layout">
+    <section class="card auth-card" aria-labelledby="register-heading">
+        <a class="back-link" href="{{ url_for('auth.login') }}">Already have an account? Log in</a>
+        <p class="eyebrow">Start with one small step</p>
+        <h1 id="register-heading">Create an account</h1>
+        <p class="intro">Set up your private space for tracking nutrition, water, steps, and weight.</p>
 
-    <h1>Create an account</h1>
+        {% if errors %}
+            <div class="errors" role="alert">
+                <strong>Please correct the following:</strong>
+                <ul>
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
 
-    <p class="intro">
-        Start tracking nutrition, water, steps, and weight.
-    </p>
+        <form method="post" class="entry-form auth-form" novalidate>
+            <label for="display_name">Display name</label>
+            <input id="display_name" name="display_name" type="text" value="{{ form.get('display_name', '') }}" maxlength="30" autocomplete="nickname" required autofocus>
+            <p class="field-hint">Shown to people in your groups instead of your email.</p>
 
-    {% if errors %}
-        <div class="errors" role="alert">
-            <strong>Please correct the following:</strong>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" value="{{ form.get('email', '') }}" autocomplete="email" required>
 
-            <ul>
-                {% for error in errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    {% endif %}
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" minlength="8" autocomplete="new-password" required>
 
-    <form
-        method="post"
-        class="entry-form"
-        novalidate
-    >
-        <label for="display_name">
-            Display name
-        </label>
+            <label for="confirm_password">Confirm password</label>
+            <input id="confirm_password" name="confirm_password" type="password" minlength="8" autocomplete="new-password" required>
 
-        <input
-            id="display_name"
-            name="display_name"
-            type="text"
-            value="{{ form.get('display_name', '') }}"
-            maxlength="30"
-            autocomplete="nickname"
-            required
-            autofocus
-        >
+            <div class="form-actions">
+                <button class="btn btn-primary" type="submit">Create account <span aria-hidden="true">→</span></button>
+            </div>
+        </form>
+    </section>
 
-        <p class="field-hint">
-            Shown to people in your groups instead of your email.
-        </p>
-
-        <label for="email">
-            Email
-        </label>
-
-        <input
-            id="email"
-            name="email"
-            type="email"
-            value="{{ form.get('email', '') }}"
-            autocomplete="email"
-            required
-        >
-
-        <label for="password">
-            Password
-        </label>
-
-        <input
-            id="password"
-            name="password"
-            type="password"
-            minlength="8"
-            autocomplete="new-password"
-            required
-        >
-
-        <label for="confirm_password">
-            Confirm password
-        </label>
-
-        <input
-            id="confirm_password"
-            name="confirm_password"
-            type="password"
-            minlength="8"
-            autocomplete="new-password"
-            required
-        >
-
-        <div class="form-actions">
-            <button
-                class="btn btn-primary"
-                type="submit"
-            >
-                Create account
-            </button>
-        </div>
-    </form>
-
-    <p>
-        Already have an account?
-        <a href="{{ url_for('auth.login') }}">
-            Log in
-        </a>
-    </p>
-</section>
+    <aside class="auth-aside auth-aside--warm" aria-label="Wellness Tracker benefits">
+        <span class="auth-aside__spark" aria-hidden="true">✦</span>
+        <p class="eyebrow eyebrow--light">Your everyday dashboard</p>
+        <h2>Progress is easier to trust when you can see it.</h2>
+        <p>Bring your habits together in one simple, encouraging view.</p>
+        <div class="auth-aside__quote">“The best routine is the one you can return to.”</div>
+    </aside>
+</div>
 {% endblock %}

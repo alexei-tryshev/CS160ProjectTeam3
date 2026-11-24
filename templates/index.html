@@ -4,42 +4,101 @@
 {% block title %}Dashboard | Wellness Tracker{% endblock %}
 
 {% block content %}
-<p class="eyebrow">Sprint 2 foundation</p>
-<h1>Track the habits that shape your health.</h1>
-<p class="intro">Record and review your nutrition, water, steps, and weight entries.</p>
+{% set card_details = {
+    "nutrition": {"icon": "◐", "tone": "mint", "label": "Daily fuel"},
+    "water": {"icon": "≈", "tone": "blue", "label": "Hydration"},
+    "steps": {"icon": "↗", "tone": "violet", "label": "Movement"},
+    "weight": {"icon": "◍", "tone": "amber", "label": "Trend"},
+    "macros": {"icon": "◒", "tone": "coral", "label": "Breakdown"},
+    "groups": {"icon": "◎", "tone": "indigo", "label": "Community"},
+    "meal_plan": {"icon": "✦", "tone": "teal", "label": "Planning"}
+} %}
+
+<section class="dashboard-hero" aria-labelledby="dashboard-heading">
+    <div class="hero-copy">
+        <p class="eyebrow eyebrow--light"><span class="eyebrow-dot"></span> Your wellness, in one place</p>
+        <h1 id="dashboard-heading">Make small habits<br><span>feel measurable.</span></h1>
+        <p class="intro">A calm, focused space to record the routines that move you forward—one entry at a time.</p>
+        <div class="hero-actions">
+            <a class="btn btn-light" href="#trackers">Explore trackers <span aria-hidden="true">↓</span></a>
+            <a class="hero-link" href="{{ url_for('meal_plan.page') }}">Plan today's meals <span aria-hidden="true">→</span></a>
+        </div>
+    </div>
+
+    <div class="hero-feature-panel">
+        <div class="hero-feature-panel__heading">
+            <p class="eyebrow eyebrow--light">Quick access</p>
+            <span>Core trackers</span>
+        </div>
+        <div class="hero-feature-links">
+            {% for key in ["nutrition", "water", "steps", "weight"] %}
+                {% set item = features[key] %}
+                {% set details = card_details[key] %}
+                <a class="hero-feature-link hero-feature-link--{{ details.tone }}" href="{{ url_for('tracking.feature_page', feature=key) }}">
+                    <span class="hero-feature-icon" aria-hidden="true">{{ details.icon }}</span>
+                    <span class="hero-feature-copy">
+                        <strong>{{ item.label }}</strong>
+                        <small>{{ details.label }}</small>
+                    </span>
+                    <span class="hero-feature-arrow" aria-hidden="true">→</span>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="section-heading" id="trackers" aria-labelledby="trackers-heading">
+    <div>
+        <p class="eyebrow">Everything in one view</p>
+        <h2 id="trackers-heading">Choose what to track</h2>
+    </div>
+    <span class="section-note">7 focused tools</span>
+</section>
 
 <section class="feature-grid" aria-label="Available features">
     {% for key in ["nutrition", "water", "steps", "weight"] %}
         {% set item = features[key] %}
-        <a class="feature-card" href="{{ url_for('tracking.feature_page', feature=key) }}">
-            <span class="card-label">Available</span>
-            <h2>{{ item.label }}</h2>
+        {% set details = card_details[key] %}
+        <a class="feature-card feature-card--{{ details.tone }}" href="{{ url_for('tracking.feature_page', feature=key) }}">
+            <div class="feature-topline">
+                <span class="feature-icon" aria-hidden="true">{{ details.icon }}</span>
+                <span class="feature-status">{{ details.label }}</span>
+            </div>
+            <h3>{{ item.label }}</h3>
             <p>{{ item.description }}</p>
-            <span class="card-link">Open tracker</span>
+            <span class="card-link">Open tracker <span aria-hidden="true">→</span></span>
         </a>
     {% endfor %}
-    <a class="feature-card" href="{{ url_for('nutrition.page', _anchor='macros') }}">
-        <span class="card-label">Available</span>
-        <h2>Macronutrient tracking</h2>
+
+    <a class="feature-card feature-card--{{ card_details.macros.tone }}" href="{{ url_for('nutrition.page', _anchor='macros') }}">
+        <div class="feature-topline">
+            <span class="feature-icon" aria-hidden="true">{{ card_details.macros.icon }}</span>
+            <span class="feature-status">{{ card_details.macros.label }}</span>
+        </div>
+        <h3>Macronutrient tracking</h3>
         <p>See your daily, weekly, and monthly protein, carbohydrate, and fat intake.</p>
-        <span class="card-link">View macros</span>
+        <span class="card-link">View macros <span aria-hidden="true">→</span></span>
     </a>
-    <a class="feature-card" href="{{ url_for('groups.page') }}">
-        <span class="card-label">Available</span>
-        <h2>Step groups</h2>
+
+    <a class="feature-card feature-card--{{ card_details.groups.tone }}" href="{{ url_for('groups.page') }}">
+        <div class="feature-topline">
+            <span class="feature-icon" aria-hidden="true">{{ card_details.groups.icon }}</span>
+            <span class="feature-status">{{ card_details.groups.label }}</span>
+        </div>
+        <h3>Step groups</h3>
         <p>Compete with friends on daily, weekly, and monthly steps.</p>
-        <span class="card-link">Open groups</span>
+        <span class="card-link">Open groups <span aria-hidden="true">→</span></span>
     </a>
-        <a class="feature-card" href="{{ url_for('meal_plan.page') }}">
-        <span class="card-label">Available</span>
-        <h2>Workout meal planning</h2>
+
+    <a class="feature-card feature-card--{{ card_details.meal_plan.tone }}" href="{{ url_for('meal_plan.page') }}">
+        <div class="feature-topline">
+            <span class="feature-icon" aria-hidden="true">{{ card_details.meal_plan.icon }}</span>
+            <span class="feature-status">{{ card_details.meal_plan.label }}</span>
+        </div>
+        <h3>Workout meal planning</h3>
         <p>Get daily calorie and macro targets for your workout goal, plus meals that fit what's left today.</p>
-        <span class="card-link">Open meal plan</span>
+        <span class="card-link">Open meal plan <span aria-hidden="true">→</span></span>
     </a>
 </section>
 
-<section class="planned" aria-labelledby="planned-heading">
-    <h2 id="planned-heading">Planned for later sprints</h2>
-    <p>AI-generated recipes, workout meal planning, and other features will build on this data foundation later.</p>
-</section>
 {% endblock %}

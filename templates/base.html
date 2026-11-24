@@ -2,113 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#15392b">
     <title>
         {% block title %}
             Wellness Tracker
         {% endblock %}
     </title>
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='style.css') }}"
-    >
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
     <header class="site-header">
-        <a
-            class="brand"
-            href="{{ url_for('main.home') }}"
-        >
-            Wellness Tracker
-        </a>
-        <nav aria-label="Primary navigation">
+        <div class="site-header__inner">
+            <a class="brand" href="{{ url_for('main.home') }}" aria-label="Wellness Tracker home">
+                <span class="brand-mark" aria-hidden="true">✦</span>
+                <span class="brand-copy">
+                    <span class="brand-name">Wellness<span class="brand-name__accent">.</span></span>
+                    <span class="brand-tagline">Make progress visible</span>
+                </span>
+            </a>
+
             {% if session.get("user_id") %}
-            {% for key, label, href in [
-                (
-                    "dashboard",
-                    "Dashboard",
-                    url_for("main.home")
-                ),
-                (
-                    "nutrition",
-                    "Nutrition",
-                    url_for("nutrition.page")
-                ),
-                (
-                    "water",
-                    "Water",
-                    url_for("water.page")
-                ),
-                (
-                    "steps",
-                    "Steps",
-                    url_for("steps.page")
-                ),
-                (
-                    "weight",
-                    "Weight",
-                    url_for("weight.page")
-                ),
-                (
-                    "groups",
-                    "Groups",
-                    url_for("groups.page")
-                ),
-                (
-                    "meal_plan",
-                    "Meal Plan",
-                    url_for("meal_plan.page")
-                )
-            ] %}
-                <a
-                    href="{{ href }}"{% if active_page == key %} aria-current="page"{% endif %}
-                >
-                    {{ label }}
-                </a>
-            {% endfor %}
-            {% endif %}
-            {% if session.get("user_id") %}
-                <form
-                    method="post"
-                    action="{{ url_for('auth.logout') }}"
-                >
-                    <button
-                        class="btn-link"
-                        type="submit"
-                    >
-                        Log out
-                    </button>
-                </form>
+                <nav class="primary-nav" aria-label="Primary navigation">
+                    <div class="nav-links">
+                        {% for key, label, href in [
+                            ("dashboard", "Dashboard", url_for("main.home")),
+                            ("nutrition", "Nutrition", url_for("nutrition.page")),
+                            ("water", "Water", url_for("water.page")),
+                            ("steps", "Steps", url_for("steps.page")),
+                            ("weight", "Weight", url_for("weight.page")),
+                            ("groups", "Groups", url_for("groups.page")),
+                            ("meal_plan", "Meal Plan", url_for("meal_plan.page"))
+                        ] %}
+                            <a class="nav-link" href="{{ href }}"{% if active_page == key %} aria-current="page"{% endif %}>
+                                {{ label }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                    <div class="account-actions">
+                        {% set account_email = session.get("email", "You") %}
+                        <span class="user-chip" title="Signed in as {{ account_email }}">
+                            <span class="user-avatar" aria-hidden="true">{{ account_email[:1]|upper }}</span>
+                            <span class="user-email">{{ account_email }}</span>
+                        </span>
+                        <form method="post" action="{{ url_for('auth.logout') }}">
+                            <button class="logout-button" type="submit">Log out</button>
+                        </form>
+                    </div>
+                </nav>
             {% else %}
-                <a href="{{ url_for('auth.login') }}">
-                    Log in
-                </a>
-                <a href="{{ url_for('auth.register') }}">
-                    Create account
-                </a>
+                <nav class="primary-nav primary-nav--public" aria-label="Account navigation">
+                    <a class="nav-link" href="{{ url_for('auth.login') }}">Log in</a>
+                    <a class="btn btn-primary btn-small" href="{{ url_for('auth.register') }}">Create account</a>
+                </nav>
             {% endif %}
-        </nav>
+        </div>
     </header>
-    <main class="container">
-        {% with messages =
-            get_flashed_messages(with_categories=true)
-        %}
+
+    <main id="main-content" class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <p
-                        class="message {{ category }}"
-                        role="status"
-                    >
-                        {{ message }}
-                    </p>
+                    <p class="message {{ category }}" role="status">{{ message }}</p>
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
         {% block content %}{% endblock %}
     </main>
+
+    <footer class="site-footer">
+        <div class="site-footer__inner">
+            <span>Wellness Tracker</span>
+            <span>Small habits. Clearer progress.</span>
+        </div>
+    </footer>
+
     {% block scripts %}{% endblock %}
 </body>
 </html>
